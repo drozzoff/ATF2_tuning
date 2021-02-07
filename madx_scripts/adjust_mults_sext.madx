@@ -1,0 +1,40 @@
+adjust_mults_sext() : macro = {
+	
+	call, file = "madx_scripts/sextmult_nominal.madx";
+	call, file = "madx_scripts/sext_k_nominal.madx";
+	
+	call, file = "madx_scripts/mults_list_sext.madx";
+
+}
+
+adjust_sext_mults(sextname) : macro = {
+
+     //   value, sextname_kn3, sextnamemult_k3nl_nominal, ksextname / sextname_nominal_k2;
+	
+
+        sextname_kn0 = sextnamemult_k0nl_nominal * ksextname / sextname_nominal_k2;
+        sextname_kn1 = sextnamemult_k1nl_nominal * ksextname / sextname_nominal_k2;
+        sextname_kn2 = sextnamemult_k2nl_nominal * ksextname / sextname_nominal_k2;
+        sextname_kn3 = sextnamemult_k3nl_nominal * ksextname / sextname_nominal_k2;
+        sextname_kn4 = sextnamemult_k4nl_nominal * ksextname / sextname_nominal_k2;
+        sextname_kn5 = sextnamemult_k5nl_nominal * ksextname / sextname_nominal_k2;
+        sextname_kn6 = sextnamemult_k6nl_nominal * ksextname / sextname_nominal_k2;
+        sextname_kn7 = sextnamemult_k7nl_nominal * ksextname / sextname_nominal_k2;
+        sextname_kn8 = sextnamemult_k8nl_nominal * ksextname / sextname_nominal_k2;
+        sextname_kn9 = sextnamemult_k9nl_nominal * ksextname / sextname_nominal_k2;
+
+        sextname_ks0 = sextnamemult_k0sl_nominal * ksextname / sextname_nominal_k2;
+        sextname_ks1 = sextnamemult_k1sl_nominal * ksextname / sextname_nominal_k2;
+        sextname_ks2 = sextnamemult_k2sl_nominal * ksextname / sextname_nominal_k2;
+        sextname_ks3 = sextnamemult_k3sl_nominal * ksextname / sextname_nominal_k2;
+        sextname_ks4 = sextnamemult_k4sl_nominal * ksextname / sextname_nominal_k2;
+        sextname_ks5 = sextnamemult_k5sl_nominal * ksextname / sextname_nominal_k2;
+        sextname_ks6 = sextnamemult_k6sl_nominal * ksextname / sextname_nominal_k2;
+        sextname_ks7 = sextnamemult_k7sl_nominal * ksextname / sextname_nominal_k2;
+        sextname_ks8 = sextnamemult_k8sl_nominal * ksextname / sextname_nominal_k2;
+        sextname_ks9 = sextnamemult_k9sl_nominal * ksextname / sextname_nominal_k2;
+
+       // value, sextname_kn3, sextnamemult_k3nl_nominal, ksextname / sextname_nominal_k2;
+
+//value, sextname_kn3, sextnamemult->k3nl, sextname->k2 / sextname_nominal_k2, sextnamemult->k3nl * sextname->k2 / sextname_nominal_k2;
+}

@@ -1,0 +1,592 @@
+twiss_macro: macro = {
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, mux = 0, muy = 0, deltap = dp0, file = "bds.twiss", save;
+}
+
+
+apply_errors: macro = {
+	call, file = "madx_scripts/misalign_macro.madx";
+
+	exec, adjust_mults_quad();
+	exec, adjust_mults_sext();
+
+}
+
+
+apply_knobs: macro = {
+
+	//Applying the shifts to the normal sextupoles
+	select, flag=error, clear;
+	eoption, add = true;
+	SELECT, FLAG=ERROR, PATTERN="^SF6F.";
+	EALIGN, DX = SF6DX, DY = SF6DY;//, DPSI:=SF6TT;
+
+	eoption, add = true;
+	select, flag=error, clear;
+	SELECT, FLAG=ERROR, PATTERN="^SF5F.";
+	EALIGN, DX = SF5DX, DY = SF5DY;//, DPSI:=SF5TT;
+
+	eoption, add = true;
+	select, flag=error, clear;
+	SELECT, FLAG=ERROR, PATTERN="^SD4F.";
+	EALIGN, DX = SD4DX, DY = SD4DY;//, DPSI:=SD4TT;
+
+	eoption, add = true;
+	select, flag=error, clear;
+	SELECT, FLAG=ERROR, PATTERN="^SF1F.";
+	EALIGN, DX = SF1DX, DY = SF1DY;//, DPSI:=SF1TT;
+
+	eoption, add = true;
+	select, flag=error, clear;
+	SELECT, FLAG=ERROR, PATTERN="^SD0F.";
+	EALIGN, DX = SD0DX, DY = SD0DY;//, DPSI:=SD0TT;
+	
+
+	//needed for QD0 roll tune
+	//In order this knob work with the rest knobs, its value has be renormalized, I use 0.1 mrad as an amplitude
+	eoption, add = true;
+	select, flag=error, clear;
+	SELECT,FLAG=ERROR, PATTERN="^QD0F.";
+	EALIGN, DPSI = QD0TT_knob * 2e-4;
+/*
+	//reseting the errrors applied
+	SF6DX = 0.0;
+	SF6DY = 0.0;
+
+	SF5DX = 0.0;
+	SF5DY = 0.0;
+
+	SD4DX = 0.0;
+	SD4DY = 0.0;
+
+	SF1DX = 0.0;
+	SF1DY = 0.0;
+
+	SD0DX = 0.0;
+	SD0DY = 0.0;
+*/
+//	select, flag = error, clear;
+//	select, flag = error, column = dx, dy, k1l, k2l, k3l;
+//	esave, file = 'errors_after.dat';
+
+	//updating the strentghs of the sextupoles
+	KSF6FF = KSF6FF + KSF6kn;
+	KSF5FF = KSF5FF + KSF5kn;
+	KSD4FF = KSD4FF + KSD4kn;
+	KSF1FF = KSF1FF + KSF1kn;
+	KSD0FF = KSD0FF + KSD0kn;
+
+	ksk1ff = ksk1ff + ksk1ks;
+	ksk2ff = ksk2ff + ksk2ks;
+	ksk3ff = ksk3ff + ksk3ks;
+	ksk4ff = ksk4ff + ksk4ks;
+
+	exec, adjust_mults_quad();
+	exec, adjust_mults_sext();
+
+
+}
+
+
+switch_sextupoles_off: macro = {
+	//normal sextupoles
+	KSF6FF = 0.0;
+	KSF5FF = 0.0;
+	KSD4FF = 0.0;
+	KSF1FF = 0.0;
+	KSD0FF = 0.0;
+
+	//skew sextupoles
+//	ksk1ff = 0.0;
+//	ksk2ff = 0.0;
+//	ksk3ff = 0.0;
+//	ksk4ff = 0.0;
+	exec, adjust_mults_sext();
+}
+
+switch_octupoles_off: macro = {
+	koct1 = 0.0;
+	koct2 = 0.0;
+}
+
+
+check_beam_size: macro = {
+
+//	call, file = "adjust_mults_quad.madx";
+    exec, adjust_mults_quad();
+	
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, range = #s/IP, mux = 0, muy = 0, deltap = 0.0, file = "bds.twiss", save;
+
+
+	ptc_create_universe;
+		ptc_create_layout, time = false, model = 2, method = 6, nst = 10;
+		ptc_align;
+		//select_ptc_normal, dx = 2, dpx = 2;
+		ptc_normal, icase = 5, no = 5, deltap = 0.00, maptable = true;
+	ptc_end;
+	
+	//Using the beam size as a figure of merit
+//	beta_x = table(twiss, IP, BETX);
+//	beta_y = table(twiss, IP, BETY);
+//	alfa_x = table(twiss, IP, ALFX);
+//	alfa_y = table(twiss, IP, ALFY);
+//	disp_x = table(twiss, IP, DX);
+//	disp_y = table(twiss, IP, DY);
+//	disp_px = table(twiss, IP, DPX);
+//	disp_py = table(twiss, IP, DPY);
+	system, "./get_size.py 5 > temp.txt";	//the value here should be modified by hand, for different matching order
+
+	call, file = "temp.txt";
+
+	value, kqf1ff, kqd0ff;
+	value, sigmaX, sigmaY;
+//	value, beta_x, beta_y, alfa_x, alfa_y, disp_x;
+}
+
+enable_bpms: macro = {
+	
+//	usemonitor, class = monitor, status = on;
+//	usekick, class = vkicker, hkicker, status = on;
+
+	//Atf2 monitors and kickers that are working, April 2019
+	usemonitor, sequence = ATF2, range = "mb1x", status = on;
+	usemonitor, sequence = ATF2, range = "mb2x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf1x", status = on;
+	usemonitor, sequence = ATF2, range = "mqd2x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf3x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf4x", status = on;
+	usemonitor, sequence = ATF2, range = "mqd5x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf6x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf7x", status = on;
+	usemonitor, sequence = ATF2, range = "mqd8x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf9x", status = on;
+	usemonitor, sequence = ATF2, range = "mqd10x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf11x", status = on;
+	usemonitor, sequence = ATF2, range = "mqd12x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf13x", status = on;
+	usemonitor, sequence = ATF2, range = "mqd14x", status = on;
+	usemonitor, sequence = ATF2, range = "mqd16x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf17x", status = on;
+	usemonitor, sequence = ATF2, range = "mqd18x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf19x", status = on;
+	usemonitor, sequence = ATF2, range = "mqd20x", status = on;
+	usemonitor, sequence = ATF2, range = "mqf21x", status = on;
+	usemonitor, sequence = ATF2, range = "mqm16ff", status = on;
+	usemonitor, sequence = ATF2, range = "mqm15ff", status = on;
+	usemonitor, sequence = ATF2, range = "mqm14ff", status = on;
+	usemonitor, sequence = ATF2, range = "mqm13ff", status = on;
+	usemonitor, sequence = ATF2, range = "mqm12ff", status = on;
+	usemonitor, sequence = ATF2, range = "mqm11ff", status = on;
+	usemonitor, sequence = ATF2, range = "mqd10bff", status = off;	//OFF
+	usemonitor, sequence = ATF2, range = "mqd10aff", status = on;
+	usemonitor, sequence = ATF2, range = "mqf9bff", status = off;	//OFF
+	usemonitor, sequence = ATF2, range = "msf6ff", status = off;	//OFF
+	usemonitor, sequence = ATF2, range = "mqf9aff", status = on;
+	usemonitor, sequence = ATF2, range = "mqd8ff", status = on;
+	usemonitor, sequence = ATF2, range = "mqf7ff", status = on;
+	usemonitor, sequence = ATF2, range = "mqd6ff", status = off;	//OFF
+	usemonitor, sequence = ATF2, range = "mqf5bff", status = on;
+	usemonitor, sequence = ATF2, range = "mqd4bff", status = on;
+	usemonitor, sequence = ATF2, range = "msd4ff", status = off;	//OFF
+	usemonitor, sequence = ATF2, range = "mqd4aff", status = off;	//OFF
+	usemonitor, sequence = ATF2, range = "mqf3ff", status = on;
+	usemonitor, sequence = ATF2, range = "mqd2bff", status = on;
+	usemonitor, sequence = ATF2, range = "mqd2aff", status = on;
+	usemonitor, sequence = ATF2, range = "msf1ff", status = off;	//OFF
+	usemonitor, sequence = ATF2, range = "mqf1ff", status = off;	//OFF
+
+	//Switching off the monitors not installed at ATF2:
+
+	usemonitor, sequence = ATF2, range = "FONTP1", status = off;
+	usemonitor, sequence = ATF2, range = "FONTP2", status = off;
+	usemonitor, sequence = ATF2, range = "FONTP3", status = off;
+	usemonitor, sequence = ATF2, range = "MQF15X", status = off;
+	usemonitor, sequence = ATF2, range = "IPBPM", status = off;
+	usemonitor, sequence = ATF2, range = "MFB2FF", status = off;
+	usemonitor, sequence = ATF2, range = "MFB1FF", status = off;
+	usemonitor, sequence = ATF2, range = "MSF5FF", status = off;
+	usemonitor, sequence = ATF2, range = "MQF5AFF", status = off;
+	usemonitor, sequence = ATF2, range = "MSD0FF", status = off;
+	usemonitor, sequence = ATF2, range = "MQD0FF", status = off;
+	usemonitor, sequence = ATF2, range = "MPREIP", status = off;
+	usemonitor, sequence = ATF2, range = "IPBPMA", status = off;
+	usemonitor, sequence = ATF2, range = "IPBPMB", status = off;
+	usemonitor, sequence = ATF2, range = "MPIP", status = on;
+
+	usemonitor, sequence = ATF2, range = "asf6ff", status = off;
+	usemonitor, sequence = ATF2, range = "asf5ff", status = off;
+	usemonitor, sequence = ATF2, range = "asd4ff", status = off;
+	usemonitor, sequence = ATF2, range = "asf1ff", status = off;
+	usemonitor, sequence = ATF2, range = "asd0ff", status = off;
+
+	usemonitor, sequence = ATF2, range = "aoct1", status = off;
+	usemonitor, sequence = ATF2, range = "aoct2", status = off;
+
+	//applying the reading error
+
+
+	
+}
+
+disable_ext_bpms: macro = {
+	//Switching the BPMs in the extraction line to improve the orbit quality in the FFS
+
+	usemonitor, sequence = ATF2, range = "mb1x", status = off;
+	usemonitor, sequence = ATF2, range = "mb2x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf1x", status = off;
+	usemonitor, sequence = ATF2, range = "mqd2x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf3x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf4x", status = off;
+	usemonitor, sequence = ATF2, range = "mqd5x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf6x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf7x", status = off;
+	usemonitor, sequence = ATF2, range = "mqd8x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf9x", status = off;
+	usemonitor, sequence = ATF2, range = "mqd10x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf11x", status = off;
+	usemonitor, sequence = ATF2, range = "mqd12x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf13x", status = off;
+	usemonitor, sequence = ATF2, range = "mqd14x", status = off;
+	usemonitor, sequence = ATF2, range = "mqd16x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf17x", status = off;
+	usemonitor, sequence = ATF2, range = "mqd18x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf19x", status = off;
+	usemonitor, sequence = ATF2, range = "mqd20x", status = off;
+	usemonitor, sequence = ATF2, range = "mqf21x", status = off;
+
+}
+
+enable_correctors: macro = {
+	usekick, sequence = ATF2, class = vkicker, status = on;
+	usekick, sequence = ATF2, class = hkicker, status = on;
+
+	usekick, sequence = ATF2, range = "ZV100RX", status = off;
+	usekick, sequence = ATF2, range = "IPKICK", status = off;
+
+	usekick, sequence = ATF2, range = "ZH100RX", status = off;
+	usekick, sequence = ATF2, range = "ZH101RX", status = off;
+	usekick, sequence = ATF2, range = "ZX1X", status = off;
+	usekick, sequence = ATF2, range = "ZX2X", status = off;
+	usekick, sequence = ATF2, range = "ZH10X", status = off;
+
+}
+
+disable_correctors: macro = {
+	usekick, sequence = ATF2, class = vkicker, status = off;
+	usekick, sequence = ATF2, class = hkicker, status = off;
+}
+
+orbit_correction: macro = {
+	exec, enable_bpms;
+	exec, enable_correctors;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = x, clist = corr_x.out, mlist = mon_x.out, monerror = 1;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = y, clist = corr_y.out, mlist = mon_y.out, monerror = 1;
+}
+
+
+write_bpm_data: macro = {
+	exec, enable_bpms;
+
+	//additional monitors inside the sextupoles/octupoles to align them | not using them for the orbit correction
+	usemonitor, sequence = ATF2, range = "asf6ff", status = on;
+	usemonitor, sequence = ATF2, range = "asf5ff", status = on;
+	usemonitor, sequence = ATF2, range = "asd4ff", status = on;
+	usemonitor, sequence = ATF2, range = "asf1ff", status = on;
+	usemonitor, sequence = ATF2, range = "asd0ff", status = on;
+	usemonitor, sequence = ATF2, range = "aoct2", status = on;
+	usemonitor, sequence = ATF2, range = "aoct1", status = on;
+	
+	exec, disable_correctors;	//initial orbit
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = x, clist = corr_x.out, mlist = mon_x.out, monerror = 1;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = y, clist = corr_y.out, mlist = mon_y.out, monerror = 1;
+
+	
+}
+
+//ensuring the beam will go through the beampipe
+orbit_precorrection: macro = {
+
+	//To be sure, splitting the beam line into 3 parts and correcting the orbit one by one
+	//STEP 1
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, range = #s/MQF9X, mux = 0, muy = 0, deltap = 0.0, file = "bds.twiss", save;
+
+	exec, enable_bpms;
+	exec, enable_correctors;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = x;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = y;
+
+	//STEP 2
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, range = #s/MQF9AFF, mux = 0, muy = 0, deltap = 0.0, file = "bds.twiss", save;
+
+	exec, enable_bpms;
+	exec, enable_correctors;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = x;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = y;
+
+	//STEP 3
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0, file = "bds.twiss", save;
+
+	exec, enable_bpms;
+	exec, enable_correctors;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = x, clist = corr_x.out, mlist = mon_x.out;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = y, clist = corr_y.out, mlist = mon_y.out;
+
+}
+
+read_correctors_kicks: macro = {
+	call, file = orbit_input.madx;
+}
+
+apply_sum_knob: macro = {
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0, file = "bds.twiss", save;
+
+	kqs1x_0 = kqs1x;
+	kqs2x_0 = kqs2x;
+
+	value, table(twiss, IP, DY);
+	print, text = "Correcting vertical dispersion, scanning the sum-knob";
+
+	match, use_macro, beta0 = mline;
+		use_macro, name = update_sum_knob;
+		vary, name = sum_knob, step = 1e-5, lower = -4.3, upper = 4.3;
+		constraint, expr = table(twiss, IP, DY) = 0.0;
+
+		simplex, tolerance = 1e-16, calls = 800;
+	endmatch;
+
+	exec, write_sum_knob;
+}
+
+update_sum_knob: macro = {
+	value, sum_knob;
+
+	kqs1x = kqs1x_0 + sum_knob;
+	kqs2x = kqs2x_0 + sum_knob;
+
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0;//, file = "bds.twiss", save;
+
+	value, table(twiss, IP, DY);
+}
+
+write_sum_knob: macro = {
+	assign, echo = "qsx_setup.madx", TRUNCATE;
+	value, kqs1x, kqs2x;
+	assign, echo = terminal;
+}
+
+apply_diff_knob: macro = {
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0, file = "bds.twiss", save;
+
+	kqs1x_0 = kqs1x;
+	kqs2x_0 = kqs2x;
+
+	value, table(twiss, IP, BETY);
+
+	print, text = "Correcting vertical dispersion, scanning the sum-knob";
+
+	match, use_macro, beta0 = mline;
+		use_macro, name = update_diff_knob;
+		vary, name = diff_knob, step = 1e-5, lower = -4.3, upper = 4.3;
+		constraint, expr = sigmaY = 20e-9;
+
+		simplex, tolerance = 1e-16, calls = 800;
+	endmatch;
+
+	exec, write_diff_knob;
+}
+
+update_diff_knob: macro = {
+
+	kqs1x = kqs1x_0 + diff_knob;
+	kqs2x = kqs2x_0 - diff_knob;
+
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0;//, file = "bds.twiss", save;
+
+	exec, check_beam_size;
+	value, diff_knob;
+	value, sigmaY;
+}
+
+write_diff_knob: macro = {
+	assign, echo = "qsx_setup.madx", TRUNCATE;
+	value, kqs1x, kqs2x;
+	assign, echo = terminal;
+}
+
+
+hor_disp_correction: macro = {
+	//Itereting the strength of QF6X to zero horizontal dispersion.
+
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0, file = "bds.twiss", save;
+
+	kqf6x_0 = kqf6x;
+	kqf1x_0 = kqf1x;
+	disp_knob = 0.0;
+	value, table(twiss, IP, DX);
+	print, text = "Correcting horizontal dispersion, iterating the strenght of QF6X";
+	
+	match, use_macro, beta0 = mline;
+		use_macro, name = update_qf6x;
+//		vary, name = kqf6x, step = 1e-5;
+//		vary, name = kqf1x,	step = 1e-5;
+		vary, name = disp_knob;
+		constraint, expr = table(twiss, IP, DX) = 0.0;
+
+		simplex, tolerance = 1e-16, calls = 800;
+	endmatch;
+
+	exec, write_disp_knob;
+}
+
+update_qf6x: macro = {
+	
+	kqf1x = kqf1x_0 + disp_knob;
+	kqf6x = kqf6x_0 - disp_knob;// * 1.0685395051125257;
+
+	select, flag = twiss, clear;
+	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0;//, file = "bds.twiss", save;
+	
+	value, kqf6x;
+	value, kqf1x;
+	value, table(twiss, IP, DX);
+}
+
+write_disp_knob: macro = {
+	assign, echo = "hor_disp_correction.madx", TRUNCATE;
+	value, kqf6x;
+	value, kqf1x;
+	assign, echo = terminal;
+}
+
+check_sextupoles_orbit: macro = {
+
+	exec, enable_bpms;
+	exec, disable_correctors;
+
+	usemonitor, sequence = ATF2, range = "asf6ff", status = on;
+	usemonitor, sequence = ATF2, range = "asf5ff", status = on;
+	usemonitor, sequence = ATF2, range = "asd4ff", status = on;
+	usemonitor, sequence = ATF2, range = "asf1ff", status = on;
+	usemonitor, sequence = ATF2, range = "asd0ff", status = on;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = x, clist = corr_x.out, mlist = mon_x.out;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = y, clist = corr_y.out, mlist = mon_y.out;
+
+	usemonitor, sequence = ATF2, range = "asf6ff", status = off;
+	usemonitor, sequence = ATF2, range = "asf5ff", status = off;
+	usemonitor, sequence = ATF2, range = "asd4ff", status = off;
+	usemonitor, sequence = ATF2, range = "asf1ff", status = off;
+	usemonitor, sequence = ATF2, range = "asd0ff", status = off;
+
+}
+
+check_octupoles_orbit: macro = {
+
+	exec, enable_bpms;
+	exec, disable_correctors;
+
+	usemonitor, sequence = ATF2, range = "aoct2", status = on;
+	usemonitor, sequence = ATF2, range = "aoct1", status = on;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = x, clist = corr_x.out, mlist = mon_x.out;
+
+	correct, sequence = ATF2, flag = "line", mode = svd, plane = y, clist = corr_y.out, mlist = mon_y.out;
+
+	usemonitor, sequence = ATF2, range = "aoct2", status = off;
+	usemonitor, sequence = ATF2, range = "aoct1", status = off;
+
+}
+
+
+switch_bpms_on: macro = {
+		//Atf2 monitors and kickers that are working, April 2019
+	ptc_observe, place = "mb1x";
+	ptc_observe, place = "mb2x";
+	ptc_observe, place = "mqf1x";
+	ptc_observe, place = "mqd2x";
+	ptc_observe, place = "mqf3x";
+	ptc_observe, place = "mqf4x";
+	ptc_observe, place = "mqd5x";
+	ptc_observe, place = "mqf6x";
+	ptc_observe, place = "mqf7x";
+	ptc_observe, place = "mqd8x";
+	ptc_observe, place = "mqf9x";
+	ptc_observe, place = "mqd10x";
+	ptc_observe, place = "mqf11x";
+	ptc_observe, place = "mqd12x";
+	ptc_observe, place = "mqf13x";
+	ptc_observe, place = "mqd14x";
+	ptc_observe, place = "mqd16x";
+	ptc_observe, place = "mqf17x";
+	ptc_observe, place = "mqd18x";
+	ptc_observe, place = "mqf19x";
+	ptc_observe, place = "mqd20x";
+	ptc_observe, place = "mqf21x";
+	ptc_observe, place = "mqm16ff";
+	ptc_observe, place = "mqm15ff";
+	ptc_observe, place = "mqm14ff";
+	ptc_observe, place = "mqm13ff";
+	ptc_observe, place = "mqm12ff";
+	ptc_observe, place = "mqm11ff";
+	ptc_observe, place = "mqd10aff";
+	ptc_observe, place = "mqf9aff";
+	ptc_observe, place = "mqd8ff";
+	ptc_observe, place = "mqf7ff";
+	ptc_observe, place = "mqf5bff";
+	ptc_observe, place = "mqd4bff";
+	ptc_observe, place = "mqf3ff";
+	ptc_observe, place = "mqd2bff";
+	ptc_observe, place = "mqd2aff";
+	ptc_observe, place = "MPIP";
+
+
+}
+
+//Realistic orbit measuremt with 
+real_orbit_measure: macro = {
+
+	ptc_create_universe;
+		ptc_create_layout, time = false, model = 2, method = 6, nst = 10;
+		ptc_align;
+		//select_ptc_normal, dx = 2, dpx = 2;
+		ptc_start;
+		exec, switch_bpms_on;
+
+		ptc_track, icase = 4, element_by_element = true, dump = true, ONETABLE = true, radiation = true, file = "current_orbit_", extension = '.dat';
+		ptc_track_end;
+//		write, table = tracksumm, file = "current_orbit.dat";
+
+	ptc_end;
+	stop;
+}

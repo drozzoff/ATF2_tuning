@@ -1,0 +1,442 @@
+TITLE "ATF2 Ultra-Low beta_y";
+option, -echo, -info;
+// ==============================================================================
+// initial conditions (entrance to DR extraction kicker)
+// ------------------------------------------------------------------------------
+
+E0d    := 1.542282; //design beam energy (GeV)
+E0     := 1.3     ; //nominal beam energy (GeV)
+EMITX  := 2.0E-9  ; //geometric horizontal emittance (m)
+EMITYn := 3.0E-8  ; //normalized vertical emittance (m)
+BLENG  := 8.0E-3  ; //bunch length (m)
+ESPRD  := 0.8E-3  ; //energy spread (1)
+TBETX  := 6.54290 ; //twiss beta x (m)
+TALFX  := 0.99638 ; //twiss alpha x
+TDX    := 4.94E-8 ; //eta x (m)
+TDPX   := -6.3E-9 ; //eta' x
+TBETY  := 3.23785 ; //twiss beta y (m)
+TALFY  := -1.9183 ; //twiss alpha y
+TDY    := 0       ; //eta y (m)
+TDPY   := 0       ; //eta' y
+
+// ==============================================================================
+// global parameters
+// ------------------------------------------------------------------------------
+
+  Cb      := 1.0E10/CLIGHT;
+  Brho    := Cb*E0;
+  betamax := 120;
+
+// ==============================================================================
+// construct input beam matrix (assumes TDY=TDPY=0)
+// ------------------------------------------------------------------------------
+
+EMITXn := EMITX*(E0/EMASS);
+EMITY := EMITYn/(E0/EMASS);
+
+
+value, emitx, emity;
+
+//value, EMITXn, EMITYn;
+BEAM, PARTICLE=ELECTRON, ENERGY=E0, EX=EMITX, EY=EMITY, SIGT=BLENG, SIGE=ESPRD, NPART=2.0E+10;
+
+
+TGAMX := (1+TALFX*TALFX)/TBETX;
+TGAMY := (1+TALFY*TALFY)/TBETY;
+SIG11 := EMITX*TBETX+TDX*TDX*ESPRD*ESPRD;
+SIG21 := -EMITX*TALFX+TDX*TDPX*ESPRD*ESPRD;
+SIG22 := EMITX*TGAMX+TDPX*TDPX*ESPRD*ESPRD;
+C21   := SIG21/SQRT(SIG11*SIG22);
+SIG33 := EMITY*TBETY;
+SIG43 := -EMITY*TALFY;
+SIG44 := EMITY*TGAMY;
+C43   := SIG43/SQRT(SIG33*SIG44);
+SIG61 := TDX*ESPRD*ESPRD;
+SIG62 := TDPX*ESPRD*ESPRD;
+SIG66 := ESPRD*ESPRD;
+C61   := SIG61/SQRT(SIG11*SIG66);
+C62   := SIG62/SQRT(SIG22*SIG66);
+//  SIG0  : SIGMA0, SIGX=SQRT(SIG11), SIGPX=SQRT(SIG22), R21=C21, &
+//                  SIGY=SQRT(SIG33), SIGPY=SQRT(SIG44), R43=C43, &
+//                  SIGT=BLENG      , SIGPT=ESPRD      , R61=C61, R62=C62
+
+// ==============================================================================
+// load XSIF files
+// ------------------------------------------------------------------------------
+
+call, file="madx_scripts/ATF2lat_BX10BY1nl.r01_v5.2_multsfrom_v4.5.madx";
+call, file="madx_scripts/matchline.madx";
+
+call, file="madx_scripts/set_q_name.madx";
+call, file="madx_scripts/set_mult_name_all.madx";
+exec, set_mult_name_all();
+
+call, file="madx_scripts/k_4bx100by_v2.madx";
+
+
+
+
+// Optimized with Octupoles, for 25x0.25, with multipolar errors ==> need of skew sextupoles.
+
+/* 
+koct1              =       -878.6688885 ;
+koct2              =        15900.45658 ;
+ksf6ff             =        137.1202057 ;
+ksf5ff             =        29.67400567 ;
+ksd4ff             =        148.7958361 ;
+ksf1ff             =       -35.88134798 ;
+ksd0ff             =        44.83042765 ;
+ksk1ff             =      0.01743633225 ;
+ksk2ff             =       -1.192458723 ;
+ksk3ff             =      -0.3392773578 ;
+ksk4ff             =      -0.5525635131 ;
+kqm16ff            =        1.543826964 ;
+kqm15ff            =        4.147454939 ;
+kqm14ff            =       -7.787002045 ;
+kqm13ff            =        4.577598779 ;
+kqm12ff            =      -0.4608371583 ;
+kqm11ff            =       0.5285764009 ;
+kqd10bff           =       -1.461128175 ;
+kqd10aff           =       -1.461128175 ;
+kqf9bff            =        1.907652616 ;
+kqf9aff            =        1.907652616 ;
+kqd8ff             =       -3.044764969 ;
+kqf7ff             =         2.77173579 ;
+kqd6ff             =       -3.034546889 ;
+kqf5bff            =        1.894587306 ;
+kqf5aff            =        1.894587306 ;
+kqd4bff            =       -1.495250509 ;
+kqd4aff            =       -1.495250509 ;
+kqf3ff             =        2.784623274 ;
+kqd2aff            =       -1.459660921 ;
+kqd2bff            =       -1.001123326 ;
+kqf1ff             =        1.663934963 ;
+kqd0ff             =       -2.868347188 ;
+qd0ff_kn2          =     -0.01242849955 ;
+
+*/
+//OCTUPOLE OPTIMIZED WITH SEXTUPOLES.
+koct1              =       0 ;
+koct2              =       0 ;
+/*
+ksk1ff             =      0 ;
+ksk2ff             =      0 ;
+ksk3ff             =      0 ;
+ksk4ff             =      0 ;
+*/
+
+
+call, file="madx_scripts/quad_k_nominal.madx";
+call, file="madx_scripts/quadmult_nominal.madx";
+call, file="madx_scripts/sextmult_nominal.madx";
+call, file="madx_scripts/sext_k_nominal.madx";
+
+/////////////////////////////////
+
+
+
+KSF6FF :=  81.032097 ;
+KSF5FF :=  -3.786206 ;
+KSD4FF :=  143.787458 ;
+KSF1FF :=  -10.974722 ;
+KSD0FF :=  46.118127 ;
+
+koct1              =                  0 ;
+koct2              =                  0 ;
+ksf6ff             =        91.78658963 ;
+ksf5ff             =       -3.506564172 ;
+ksd4ff             =        149.3762576 ;
+ksf1ff             =       -27.92346201 ;
+ksd0ff             =        44.78631518 ;
+ksk1ff             =                  0 ;
+ksk2ff             =                  0 ;
+ksk3ff             =                  0 ;
+ksk4ff             =                  0 ;
+//kqm16ff            =                  0 ;
+
+//--------------------------------------
+
+koct1              =                  0 ;
+koct2              =                  0 ;
+ksf6ff             =        91.78665785 ;
+ksf5ff             =       -3.530001221 ;
+ksd4ff             =        149.3875064 ;
+ksf1ff             =       -27.92718658 ;
+ksd0ff             =        44.78781749 ;
+ksk1ff             =      0.02410944045 ;
+ksk2ff             =       -1.220439124 ;
+ksk3ff             =      -0.2890179105 ;
+ksk4ff             =      -0.5849338171 ;
+
+koct1              =                  0 ;
+koct2              =                  0 ;
+ksf6ff             =        88.66951867 ;
+ksf5ff             =       -3.866886897 ;
+ksd4ff             =        148.5076612 ;
+ksf1ff             =       -27.50614698 ;
+ksd0ff             =        44.83052669 ;
+ksk1ff             =       0.0787895258 ;
+ksk2ff             =       -1.209820763 ;
+ksk3ff             =      -0.8862641147 ;
+ksk4ff             =       -1.262077917 ;
+
+////////////////////////////////
+// BETA X,Y OPTIMIZED WITH QD0-QF1
+//kqf1ff             =        1.679217986 ;
+//kqd0ff             =       -2.872149624 ;
+
+
+//WAIST OPTIMIZED WITH QD0-QF1
+//kqf1ff             =        1.678062007*0.99 ;
+//kqd0ff             =        -2.87188989 ;
+
+//	ksf6ff             =        88.66951867 ;
+//	ksf5ff             =       -3.866886897 ;
+//	ksd4ff             =        148.5076612 ;
+//	ksf1ff             =       -27.50614698 ;
+//	ksd0ff             =        44.83052669 ;
+//	ksk1ff             =       0.0787895258 ;
+//	ksk2ff             =       -1.209820763 ;
+//	ksk3ff             =      -0.8862641147 ;
+//	ksk4ff             =       -1.262077917 ;
+
+
+//koct1 =        -14631.54 ;
+//koct2 =        1804.8 ;
+
+//call, file="MACHINE_ULTRA-LOW_K.madx";
+//call, file="NEW_MACHINE_ULTRA-LOW_K_FEB18.madx";
+
+//call, file="MACHINE_NOMINAL_K.madx";
+//call, file="MACHINE_HALF_K.madx";
+//call, file="MACHINE_NOMINAL_BEST_K.madx";
+call, file="madx_scripts/MACHINE_NOMINAL_FEB2018.madx";
+
+//Nominal parameters:
+//KQD16X := -5.159160663005693 ;
+//KQF17X := 5.159157136379667 ;
+//KQD18X := -3.4587198347523804 ;
+//KQF19X := 3.3030555695501036 ;
+//KQD20X := -3.9069556374729877 ;
+//KQF21X := 3.5142493962120245 ;
+
+
+
+	//extraction line quads:
+	//kqd16x             =       -5.159160663 ; // 47.013
+	//kqf17x             =        5.159157136 ; // 46.97
+	//kqd18x             =       -3.458719835 ; // 31.46
+	kqf19x             =        3.027517606 ; // 27.50
+	kqd20x             =       -2.557473406 ; // 28.72
+	kqf21x             =        4.987927844 ; // 56.53
+
+	//matching quads
+	kqm16ff            =                  0 ;
+	kqm15ff            =        5.666474426 ; // 51.64
+	kqm14ff            =        -8.99925631 ; // -82.65
+	kqm13ff            =        5.302085025 ; // 48.51
+	kqm12ff            =       -1.370824991 ; // -12.34
+	kqm11ff            =       0.8308651056 ; // 7.47
+
+	//FFS quads
+	kqd10bff           =          -1.461012 ;
+	kqd10aff           =          -1.461218 ;
+	kqf9bff            =           1.907722 ;
+	kqf9aff            =             1.9077 ;
+	kqd8ff             =          -3.044646 ;
+	kqf7ff             =            2.77178 ;
+	kqd6ff             =          -3.034778 ;
+	kqf5bff            =           1.894596 ;
+	kqf5aff            =           1.894562 ;
+	kqd4bff            =          -1.495508 ;
+	kqd4aff            =          -1.495248 ;
+	kqf3ff             =           2.784657 ;
+	kqd2aff            =          -1.459783 ;
+	kqd2bff            =          -1.001061 ;
+
+	kqf1ff             =        1.661885988 ;
+	kqd0ff             =       -2.857321177 ;
+
+
+	//sextupoles
+	ksf6ff             =        220.1178738 ;
+	ksf5ff             =        25.80785516 ;
+	ksd4ff             =        183.3728196 ;
+	ksf1ff             =       -16.59135058 ;
+	ksd0ff             =        30.46821609 ;
+	//skew sextupoles
+	//ksk1ff             =    0.0 ;
+	//ksk2ff             =       0.0 ;
+	//ksk3ff             =      0.0 ;
+	//ksk4ff             =      0.0 ;
+
+	//skew sextupoles
+	ksk1ff             =    -0.009356887575 ;
+	ksk2ff             =       -1.135747168 ;
+	ksk3ff             =      -0.3246636104 ;
+	ksk4ff             =      -0.6069404599 ;
+
+
+
+	//Octupoles (design, outside the limit)
+	koct1              =       -900.9703714 ;
+	koct2              =        17685.41384 ;
+
+	//scalled version of the current setup
+//	koct1              =       -447.5026741 ;
+//	koct2              =        899.9999979 ;
+
+	//Octupoles (swapped setup)
+	koct1              =       -599.8898205 ;
+	koct2              =          7309.9998 ;
+
+	koct1 = 0.0;
+
+//	koct1              =       -900.9703714 ;
+//	koct2              =        17685.41384 ;
+
+//	koct1 = 0.0;
+//	koct2 = 0.0;
+
+//in the case when no matching is needed
+//call, file = "matchline.madx";
+
+
+//ATF2: LINE:=(EXT,FF);
+//Parameters for the case when matching is needed
+//Twiss parameters at the OTR screen
+//	otr0_betx = 11.6490;
+//	otr0_bety = 7.1542;
+
+//	otr0_alfx = -8.7100;
+//	otr0_alfy = 3.2278;
+
+//assuming zero horizontal dispersion
+//	otr0_dx = 0.0;
+//	otr0_dpx = 0.0;
+
+
+//Calculaing the twiss at the beginning of the FFS (BEGFF) and saving as ffs_start for later use with the line FF 
+//use, sequence = ATF2;
+
+//select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle;
+//twiss, betx = otr0_betx, bety = otr0_bety, alfx = otr0_alfx, alfy = otr0_alfy, dx = otr0_dx, dpx = otr0_dpx, file = 'bds.twiss';
+
+//saving current parameters
+//	betx_ff = table(twiss, BEGFF, betx);
+//	bety_ff = table(twiss, BEGFF, bety);
+//	alfx_ff = table(twiss, BEGFF, alfx);
+//	alfy_ff = table(twiss, BEGFF, alfy);
+//call, file = "set_mult_scaled.madx";
+
+
+
+
+//select, flag = twiss, clear;
+//select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle;
+//select, flag = twiss, column = name, betx, bety, alfx, alfy;
+//twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0, file = "bds.twiss", save;
+
+
+//stop;
+
+//call, file = "matchline.madx";
+
+//value, ksf6ff, ksf5ff, ksd4ff, ksf1ff, ksd0ff;
+
+//	Nominal optics lattice
+//	ksf6ff             =        86.83012037 ;
+//	ksf5ff             =       -6.490534983 ;
+//	ksd4ff             =        150.7554373 ;
+//	ksf1ff             =       -26.06896976 ;
+//	ksd0ff             =        43.71767398 ;
+
+	koct1              =       0.0 ;
+	koct2 = 0.0;
+	koct2              =         7309.9998;
+//	koct2              =         3000.0;
+
+
+//ATF2_m: line = (MLinv, FF);
+call, file="madx_scripts/adjust_mults_quad.madx";
+exec, adjust_mults_quad();
+call, file="madx_scripts/adjust_mults_sext.madx";
+exec, adjust_mults_sext();
+
+call, file = "madx_scripts/set_mult_scaled.madx";
+
+ATF2: LINE:=(MLinv,EXT,FF);
+
+ATF2_post: LINE := (MLinv,EXT,FF, POST);
+
+use, period = ATF2;
+//saveline, line = ATF2;
+//save, sequence = ATF2, file = "atf2_ultralow.madx", NOEXPR = true;
+
+
+//stop;
+
+select, flag = twiss, clear;
+select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+//select, flag = twiss, column = name, betx, bety, alfx, alfy;
+twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0;//, file = "bds.twiss", save;
+
+
+	value, table(twiss, ASD0FF, MUY) - table(twiss, ASD4FF, MUY);
+	value, table(twiss, ASD0FF, MUX) - table(twiss, ASD4FF, MUX);
+
+	value, table(twiss, ASF1FF, MUY) - table(twiss, ASF5FF, MUY), table(twiss, ASF1FF, MUY) - table(twiss, ASF6FF, MUY);
+	value, table(twiss, ASF1FF, MUX) - table(twiss, ASF5FF, MUX), table(twiss, ASF1FF, MUX) - table(twiss, ASF6FF, MUX);
+
+
+//stop;
+/*
+ptc_create_universe;
+	ptc_create_layout, time = false, model = 2, method = 6, nst = 10;
+	ptc_align;
+	//select_ptc_normal, dx = 2, dpx = 2;
+	ptc_normal, icase = 5, no = 5, deltap = 0.00, maptable = true;
+ptc_end;
+
+
+system, "./get_size.py 5";
+
+stop;
+*/
+//call, file = "knobs_contruction.madx";
+// next file is not needed
+//call, file = "nonlinear_knobs_contruction.madx"
+
+//Checking the knobs for orthogonality
+call, file = "tuning_macroses.madx";
+call, file = "madx_scripts/init_sext_misalign0.madx";
+
+//	Interface file between python and madx
+call, file = "input.madx";
+
+
+
+select, flag = twiss, clear;
+select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+//select, flag = twiss, full;
+twiss, beta0 = mline, mux = 0, muy = 0, deltap = dp0;//, file = "bds.twiss", save;
+
+
+//The next part is needed for the coupling calculations
+ptc_create_universe;
+	ptc_create_layout, time = false, model = 2, method = 6, nst = 10;
+	ptc_align;
+	//select_ptc_normal, dx = 2, dpx = 2;
+	ptc_normal, icase = 5, no = 5, deltap = dp0, maptable = true;
+ptc_end;
+
+//system, "./get_size.py 5";
+
+//stop;
+
+//call, file = "tuning.madx";
+
+//The file needed to effectively check and construct the knobs at the same time
+//call, file = "input.madx";
+
+stop;

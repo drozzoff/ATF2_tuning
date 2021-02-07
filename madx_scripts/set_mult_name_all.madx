@@ -1,0 +1,80 @@
+set_mult_name_all() : macro = {
+
+        call, file="mults_list_setname.madx";
+
+}
+set_mult_name(quadname,mult_apert) : macro = {
+
+	quadname_kn0:=0;
+	quadname_kn1:=0;
+	quadname_kn2:=0;
+	quadname_kn3:=0;
+	quadname_kn4:=0;
+	quadname_kn5:=0;
+	quadname_kn6:=0;
+	quadname_kn7:=0;
+	quadname_kn8:=0;
+	quadname_kn9:=0;
+	            
+	quadname_ks0:=0;
+	quadname_ks1:=0;
+	quadname_ks2:=0;
+	quadname_ks3:=0;
+	quadname_ks4:=0;
+	quadname_ks5:=0;
+	quadname_ks6:=0;
+	quadname_ks7:=0;
+	quadname_ks8:=0;
+	quadname_ks9:=0;
+
+
+	quadname_kn0 = quadnamemult->k0nl;
+	quadname_kn1 = quadnamemult->k1nl;
+	quadname_kn2 = quadnamemult->k2nl;
+	quadname_kn3 = quadnamemult->k3nl;
+	quadname_kn4 = quadnamemult->k4nl;
+	quadname_kn5 = quadnamemult->k5nl;
+	quadname_kn6 = quadnamemult->k6nl;
+	quadname_kn7 = quadnamemult->k7nl;
+	quadname_kn8 = quadnamemult->k8nl;
+	quadname_kn9 = quadnamemult->k9nl;
+
+	quadname_ks0 = quadnamemult->k0sl;
+	quadname_ks1 = quadnamemult->k1sl;
+	quadname_ks2 = quadnamemult->k2sl;
+	quadname_ks3 = quadnamemult->k3sl;
+	quadname_ks4 = quadnamemult->k4sl;
+	quadname_ks5 = quadnamemult->k5sl;
+	quadname_ks6 = quadnamemult->k6sl;
+	quadname_ks7 = quadnamemult->k7sl;
+	quadname_ks8 = quadnamemult->k8sl;
+	quadname_ks9 = quadnamemult->k9sl;
+
+	quadnamemult: MULTIPOLE, LRAD=0, TILT=0,
+	KNL:={
+		quadname_kn0,
+		quadname_kn1,
+		quadname_kn2,
+		quadname_kn3,
+		quadname_kn4,
+		quadname_kn5,
+		quadname_kn6,
+		quadname_kn7,
+		quadname_kn8,
+		quadname_kn9
+	},
+	KSL:={
+		quadname_ks0,
+		quadname_ks1,
+		quadname_ks2,
+		quadname_ks3,
+		quadname_ks4,
+		quadname_ks5,
+		quadname_ks6,
+		quadname_ks7,
+		quadname_ks8,
+		quadname_ks9
+	},
+	APERTURE = mult_apert;
+
+}

@@ -1,0 +1,6 @@
+exec,adjust_sext_mults(sf6ff);
+exec,adjust_sext_mults(sf5ff);
+exec,adjust_sext_mults(sd4ff);
+exec,adjust_sext_mults(sf1ff);
+exec,adjust_sext_mults(sd0ff);
+

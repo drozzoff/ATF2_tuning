@@ -1,0 +1,158 @@
+adjust_mults_quad() : macro = {
+	
+	call, file="madx_scripts/quad_k_nominal.madx";
+	call, file="madx_scripts/quadmult_nominal.madx";
+	call, file="madx_scripts/mults_list_quad.madx";
+
+}
+
+adjust_quad_mults(quadname) : macro = {
+
+
+       // value, quadname_kn2, quadnamemult_k2nl_nominal, kquadname / quadname_nominal_k1;
+/*	
+        quadname_kn0 = 5*quadnamemult_k0nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn1 = 5*quadnamemult_k1nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn2 = 5*quadnamemult_k2nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn3 = 5*quadnamemult_k3nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn4 = 5*quadnamemult_k4nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn5 = 5*quadnamemult_k5nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn6 = 5*quadnamemult_k6nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn7 = 5*quadnamemult_k7nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn8 = 5*quadnamemult_k8nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn9 = 5*quadnamemult_k9nl_nominal * kquadname / quadname_nominal_k1;
+                                                           
+        quadname_ks0 = 5*quadnamemult_k0sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks1 = 5*quadnamemult_k1sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks2 = 5*quadnamemult_k2sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks3 = 5*quadnamemult_k3sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks4 = 5*quadnamemult_k4sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks5 = 5*quadnamemult_k5sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks6 = 5*quadnamemult_k6sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks7 = 5*quadnamemult_k7sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks8 = 5*quadnamemult_k8sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks9 = 5*quadnamemult_k9sl_nominal * kquadname / quadname_nominal_k1;
+*/
+
+        quadname_kn0 = quadnamemult_k0nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn1 = quadnamemult_k1nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn2 = quadnamemult_k2nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn3 = quadnamemult_k3nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn4 = quadnamemult_k4nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn5 = quadnamemult_k5nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn6 = quadnamemult_k6nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn7 = quadnamemult_k7nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn8 = quadnamemult_k8nl_nominal * kquadname / quadname_nominal_k1;
+        quadname_kn9 = quadnamemult_k9nl_nominal * kquadname / quadname_nominal_k1;
+                                                           
+        quadname_ks0 = quadnamemult_k0sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks1 = quadnamemult_k1sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks2 = quadnamemult_k2sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks3 = quadnamemult_k3sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks4 = quadnamemult_k4sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks5 = quadnamemult_k5sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks6 = quadnamemult_k6sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks7 = quadnamemult_k7sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks8 = quadnamemult_k8sl_nominal * kquadname / quadname_nominal_k1;
+        quadname_ks9 = quadnamemult_k9sl_nominal * kquadname / quadname_nominal_k1;
+
+      //  value, quadname_kn2, quadnamemult_k2nl_nominal, kquadname / quadname_nominal_k1;
+
+        !quadname_kn0 = quadnamemult->k0nl * quadname->k1 / quadname_nominal_k1;
+        !quadname_kn1 = quadnamemult->k1nl * quadname->k1 / quadname_nominal_k1;
+        !quadname_kn2 = quadnamemult->k2nl * quadname->k1 / quadname_nominal_k1;
+        !quadname_kn3 = quadnamemult->k3nl * quadname->k1 / quadname_nominal_k1;
+        !quadname_kn4 = quadnamemult->k4nl * quadname->k1 / quadname_nominal_k1;
+        !quadname_kn5 = quadnamemult->k5nl * quadname->k1 / quadname_nominal_k1;
+        !quadname_kn6 = quadnamemult->k6nl * quadname->k1 / quadname_nominal_k1;
+        !quadname_kn7 = quadnamemult->k7nl * quadname->k1 / quadname_nominal_k1;
+        !quadname_kn8 = quadnamemult->k8nl * quadname->k1 / quadname_nominal_k1;
+        !quadname_kn9 = quadnamemult->k9nl * quadname->k1 / quadname_nominal_k1;
+        !                                          
+        !quadname_ks0 = quadnamemult->k0sl * quadname->k1 / quadname_nominal_k1;
+        !quadname_ks1 = quadnamemult->k1sl * quadname->k1 / quadname_nominal_k1;
+        !quadname_ks2 = quadnamemult->k2sl * quadname->k1 / quadname_nominal_k1;
+        !quadname_ks3 = quadnamemult->k3sl * quadname->k1 / quadname_nominal_k1;
+        !quadname_ks4 = quadnamemult->k4sl * quadname->k1 / quadname_nominal_k1;
+        !quadname_ks5 = quadnamemult->k5sl * quadname->k1 / quadname_nominal_k1;
+        !quadname_ks6 = quadnamemult->k6sl * quadname->k1 / quadname_nominal_k1;
+        !quadname_ks7 = quadnamemult->k7sl * quadname->k1 / quadname_nominal_k1;
+        !quadname_ks8 = quadnamemult->k8sl * quadname->k1 / quadname_nominal_k1;
+        !quadname_ks9 = quadnamemult->k9sl * quadname->k1 / quadname_nominal_k1;
+
+!quadname_kn0=0;
+!quadname_kn1=0;
+!quadname_kn2=0;
+!quadname_kn3=0;
+!quadname_kn4=0;
+!quadname_kn5=0;
+!quadname_kn6=0;
+!quadname_kn7=0;
+!quadname_kn8=0;
+!quadname_kn9=0;
+!
+!quadname_ks0=0;
+!quadname_ks1=0;
+!quadname_ks2=0;
+!quadname_ks3=0;
+!quadname_ks4=0;
+!quadname_ks5=0;
+!quadname_ks6=0;
+!quadname_ks7=0;
+!quadname_ks8=0;
+!quadname_ks9=0;
+
+assign, echo="mults_temp_quad.madx";
+
+/*
+print, text="******************************";
+       !value, quadnamemult->k0nl;
+       !value, quadnamemult->k1nl;
+       !value, quadnamemult->k2nl;
+       !value, quadnamemult->k3nl;
+       !value, quadnamemult->k4nl;
+       !value, quadnamemult->k5nl;
+       !value, quadnamemult->k6nl;
+       !value, quadnamemult->k7nl;
+       !value, quadnamemult->k8nl;
+       !value, quadnamemult->k9nl;
+
+       !value, quadnamemult->k0sl;
+       !value, quadnamemult->k1sl;
+       !value, quadnamemult->k2sl;
+       !value, quadnamemult->k3sl;
+       !value, quadnamemult->k4sl;
+       !value, quadnamemult->k5sl;
+       !value, quadnamemult->k6sl;
+       !value, quadnamemult->k7sl;
+       !value, quadnamemult->k8sl;
+       !value, quadnamemult->k9sl;
+*/
+
+       value, quadname_kn0;
+       value, quadname_kn1;
+       value, quadname_kn2;
+       value, quadname_kn3;
+       value, quadname_kn4;
+       value, quadname_kn5;
+       value, quadname_kn6;
+       value, quadname_kn7;
+       value, quadname_kn8;
+       value, quadname_kn9;
+                         
+       value, quadname_ks0;
+       value, quadname_ks1;
+       value, quadname_ks2;
+       value, quadname_ks3;
+       value, quadname_ks4;
+       value, quadname_ks5;
+       value, quadname_ks6;
+       value, quadname_ks7;
+       value, quadname_ks8;
+       value, quadname_ks9;
+
+assign, echo=terminal;
+	!value, kquadname;
+	!value, kquadname / quadname_nominal_k1;
+	!value, quadnamemult->k3nl;	
+}

@@ -1,0 +1,61 @@
+Q1: QUADRUPOLE, L:=0.1, K1:=KQ1;
+Q2: QUADRUPOLE, L:=0.1, K1:=KQ2;
+L1: DRIFT, L:=0.3;
+B: SBEND, L:=0.1, ANGLE:=BANG, K1:=BK1;
+S: MARKER;
+ML: LINE:=(S,Q2,L1,B,L1,Q1,L1);
+MLinv: LINE :=(-(ML));
+
+beam, particle=electron, energy=1.3, sequence=ML;
+beam, particle=electron, energy=1.3, sequence=MLinv;
+use, sequence=ML;
+
+/*
+//match, betx = 6.5429, bety = 3.23785, dx = 4.94e-08, alfx = -0.99638, alfy = 1.9183, dpx = 6.3e-09;
+//match, betx = otr0_betx, bety = otr0_bety, alfx = otr0_alfx, alfy = otr0_alfy, dx = otr0_dx, dpx = otr0_dpx;
+match, betx = betx_ff, bety = bety_ff, alfx = -alfx_ff, alfy = -alfy_ff;
+	vary, name = KQ1;
+	vary, name = KQ2;
+	vary, name = BANG;
+	vary, name = BK1;
+	
+	constraint, range = #e, dx=0, dpx = 0, alfx = 0, alfy = 0;
+	
+	lmdif, calls = 1e6, tolerance = 1e-18;
+	simplex, calls = 1e6, tolerance = 1e-18;
+endmatch;
+*/
+
+//Parameters for the case when the matching is done from the beginning of the extraction line.
+	kq1 =       0.5012188992 ;
+	kq2 =       -1.460941128 ;
+	bang =    1.643719428e-09 ;
+	bk1 =        2.336107023 ;
+
+//Parameters for the case when the matching is done starting from the otr0 screen
+//The values here would be different for each
+
+//kq1                =        6.190693338 ;
+//kq2                =       -7.548316512 ;
+//bang               =              5e-14 ;
+//bk1                =        2.898861081 ;
+
+//use, sequence=ML;
+
+value, kq1, kq2, bang, bk1;
+
+savebeta, label = mline, place = #e, sequence = ML;
+
+select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle;
+
+//no matching needed
+twiss, betx = 6.5429, bety = 3.23785, dx = 4.94e-08, alfx = -0.99638, alfy = +1.9183, dpx = 6.3e-09;//, file = 'mline.twiss';
+//twiss, betx = otr0_betx, bety = otr0_bety, alfx = otr0_alfx, alfy = otr0_alfy, file = "bds.twiss", save;
+//twiss, betx = otr0_betx, bety = otr0_betx, alfx = otr0_alfx, alfy = otr0_alfy, dx = otr0_dx, dpx = otr0_dpx, file = 'mline.twiss';
+//twiss, betx = betx_ff, bety = bety_ff, alfx = -alfx_ff, alfy = -alfy_ff, file = 'mline.twiss';
+
+use, sequence = MLinv;
+twiss, beta0 = mline, mux=0, muy=0;//, file = 'minvline.twiss';
+
+
+
