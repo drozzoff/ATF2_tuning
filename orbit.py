@@ -8,7 +8,7 @@ import numpy as np
 import copy
 
 import json
-from machine import AbstractMachine, generate_errors_for_madx
+from machine import AbstractMachine
 
 #Python 3.2+
 #from collections import ChainMap
