@@ -3,7 +3,27 @@ twiss_macro: macro = {
 	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
 	twiss, beta0 = mline, mux = 0, muy = 0, deltap = dp0, file = "bds.twiss", save;
 }
+reset_knobs: macro = {
+	//
+	//Reseting the knobs that are constructed on the sextupoles shifts
+	//to make the shifts to be zero, since the shifts are sumed when sext_shifts
+	//macro is called
 
+	QD0TT_knob = 0.0;
+	kax = 0.0;
+	kay = 0.0;
+	kay_2 = 0.0;	//Used for the octupole alignment
+	kex = 0.0;
+	coup_yx = 0.0;
+	coup_ypx = 0.0;
+	key = 0.0;
+	k324 = 0.0;
+	k346 = 0.0;
+	k322 = 0.0;
+	k326 = 0.0;
+	k344 = 0.0;
+	k366 = 0.0;
+}
 
 apply_errors: macro = {
 	call, file = "madx_scripts/misalign_macro.madx";

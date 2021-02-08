@@ -1,6 +1,6 @@
 set_mult_name_all() : macro = {
 
-        call, file="mults_list_setname.madx";
+        call, file="madx_scripts/mults_list_setname.madx";
 
 }
 set_mult_name(quadname,mult_apert) : macro = {

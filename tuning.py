@@ -63,13 +63,12 @@ gaussdpp = True
 
 atf2_machine = AbstractMachine(sigmaInitial, gaussdpp, tuning_order = 5, Nparticles = 100000, method = 0, name = "ATF2")
 
-exit()
 knobs_loc, knobs_list = "knobs_storage/", ["kax.knob", "kay.knob", "kex.knob", "coup_yx.knob", "coup_ypx.knob", "key.knob"]
 atf2_machine.knobs = list(map(lambda x: Knob(filename = knobs_loc + x), knobs_list))
 
 atf2_generate_errors()
 atf2 = ATF2Tuning(atf2_machine, ipbsm_errors = False, initial_errors = "initial_errors.madx")
-exit()
+
 #tuning the linear knobs
 hor_knobs = ["kax", "kex"]
 vert_knobs = ["kay", "key", "coup_ypx"]
@@ -77,12 +76,7 @@ vert_knobs = ["kay", "key", "coup_ypx"]
 iteration_list = vert_knobs
 #atf2.read_setup()
 #atf2.measure_orbit(plot = plot_orbit)
-atf2.correct_orbit()
-
-
-#	print atf2.iterate_knob("kay", 0, post_adj = [add_measurement_error('6.4'), convert_to_modulation('6.4')], fit = modulation_fit, plot = iteration_plot, initial_errors = "initial_errors.madx")
-#print atf2.abs_m._get_obs(0, sext_off = False)	
-#exit()
+atf2.correct_orbit(plot = plot_orbit)
 
 #waist scan
 atf2.tune("kqf1ff", 1, knob_range = [1.661885988 * 0.99, 1.661885988 * 1.01], additive = False, plot = iteration_plot)
@@ -91,8 +85,7 @@ atf2.tune("kqd0ff", knob_range = [(-2.857321177) * 1.01, (-2.857321177) * 0.99],
 __ = map(lambda x: atf2.tune(x, sext_off = False), iteration_list)	#traditional tuning with linear knobs
 atf2.save_log()
 atf2.save_setup()
-#	atf2.measure_orbit(plot = plot_orbit)
-exit()	
+
 
 atf2.tune("QD0TT_knob", knob_range = [-1.0, 1.0], additive = False, sext_off = False)
 atf2.tune("koct2", knob_range = [-7309.9998, 7309.9998], sext_off = False, oct_off = False)

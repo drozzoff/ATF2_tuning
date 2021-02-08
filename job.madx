@@ -376,17 +376,17 @@ use, period = ATF2;
 
 //stop;
 
-select, flag = twiss, clear;
-select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
-//select, flag = twiss, column = name, betx, bety, alfx, alfy;
-twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0;//, file = "bds.twiss", save;
+//	select, flag = twiss, clear;
+//	select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
+	//select, flag = twiss, column = name, betx, bety, alfx, alfy;
+//	twiss, beta0 = mline, mux = 0, muy = 0, deltap = 0.0;//, file = "bds.twiss", save;
 
 
-	value, table(twiss, ASD0FF, MUY) - table(twiss, ASD4FF, MUY);
-	value, table(twiss, ASD0FF, MUX) - table(twiss, ASD4FF, MUX);
+//	value, table(twiss, ASD0FF, MUY) - table(twiss, ASD4FF, MUY);
+//	value, table(twiss, ASD0FF, MUX) - table(twiss, ASD4FF, MUX);
 
-	value, table(twiss, ASF1FF, MUY) - table(twiss, ASF5FF, MUY), table(twiss, ASF1FF, MUY) - table(twiss, ASF6FF, MUY);
-	value, table(twiss, ASF1FF, MUX) - table(twiss, ASF5FF, MUX), table(twiss, ASF1FF, MUX) - table(twiss, ASF6FF, MUX);
+//	value, table(twiss, ASF1FF, MUY) - table(twiss, ASF5FF, MUY), table(twiss, ASF1FF, MUY) - table(twiss, ASF6FF, MUY);
+//	value, table(twiss, ASF1FF, MUX) - table(twiss, ASF5FF, MUX), table(twiss, ASF1FF, MUX) - table(twiss, ASF6FF, MUX);
 
 
 //stop;
@@ -414,12 +414,10 @@ call, file = "madx_scripts/init_sext_misalign0.madx";
 //	Interface file between python and madx
 call, file = "input.madx";
 
-
-
 select, flag = twiss, clear;
 select, flag = twiss, column = name, keyword, s, betx, bety, alfx, alfy, mux, muy, dx, dpx, K1L, K2L, k3L, k1SL, k2SL, k3SL, L, angle, dy, dpy;
 //select, flag = twiss, full;
-twiss, beta0 = mline, mux = 0, muy = 0, deltap = dp0;//, file = "bds.twiss", save;
+twiss, beta0 = mline, mux = 0, muy = 0, deltap = dp0, file = "bds.twiss", save;
 
 
 //The next part is needed for the coupling calculations
