@@ -1,0 +1,38 @@
+exec,set_mult_name(qd10x,0.016);
+exec,set_mult_name(qf11x,0.016);
+exec,set_mult_name(qd12x,0.016);
+exec,set_mult_name(qd16x,0.016);
+exec,set_mult_name(qf17x,0.016);
+exec,set_mult_name(qd18x,0.016);
+exec,set_mult_name(qf19x,0.016);
+exec,set_mult_name(qd20x,0.016);
+exec,set_mult_name(qf21x,0.016);
+exec, set_mult_name(qm16ff,0.016); 
+exec, set_mult_name(qm15ff,0.016); 
+exec, set_mult_name(qm14ff,0.016); 
+exec, set_mult_name(qm13ff,0.016); 
+exec, set_mult_name(qm12ff,0.016); 
+exec, set_mult_name(qm11ff,0.016); 
+exec, set_mult_name(qd10bff,0.016);
+exec, set_mult_name(qd10aff,0.016);
+exec, set_mult_name(qf9bff,0.016); 
+exec, set_mult_name(qf9aff,0.016); 
+exec, set_mult_name(qd8ff,0.016);  
+exec, set_mult_name(qf7ff,0.016);  
+exec, set_mult_name(qd6ff,0.016);  
+exec, set_mult_name(qf5bff,0.016); 
+exec, set_mult_name(qf5aff,0.016); 
+exec, set_mult_name(qd4bff,0.016); 
+exec, set_mult_name(qd4aff,0.016); 
+exec, set_mult_name(qf3ff,0.016);  
+exec, set_mult_name(qd2bff,0.016); 
+exec, set_mult_name(qd2aff,0.016); 
+exec, set_mult_name(qf1ff,0.05);  
+exec, set_mult_name(qd0ff,0.025);
+
+exec, set_mult_name(sf6ff,0.020638);
+exec, set_mult_name(sf5ff,0.020638);
+exec, set_mult_name(sd4ff,0.020638);
+exec, set_mult_name(sf1ff,0.02705);
+exec, set_mult_name(sd0ff,0.02705);
+  

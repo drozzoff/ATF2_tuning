@@ -1,0 +1,57 @@
+//extraction line quads:
+//kqd16x             =       -5.159160663 ; // 47.013
+//kqf17x             =        5.159157136 ; // 46.97
+//kqd18x             =       -3.458719835 ; // 31.46
+kqf19x             =        3.027517606 ; // 27.50
+kqd20x             =       -2.557473406 ; // 28.72
+kqf21x             =        4.987927844 ; // 56.53
+
+//matching quads
+kqm16ff            =       -1.225860236 ;
+kqm15ff            =         5.64980686 ;
+kqm14ff            =        -9.41802457 ;
+kqm13ff            =        5.321958186 ;
+kqm12ff            =       -1.338069973 ;
+kqm11ff            =       0.8277426222 ;
+
+//FFS quads
+kqd10bff           =          -1.461012 ;
+kqd10aff           =          -1.461218 ;
+kqf9bff            =           1.907722 ;
+kqf9aff            =             1.9077 ;
+kqd8ff             =          -3.044646 ;
+kqf7ff             =            2.77178 ;
+kqd6ff             =          -3.034778 ;
+kqf5bff            =           1.894596 ;
+kqf5aff            =           1.894562 ;
+kqd4bff            =          -1.495508 ;
+kqd4aff            =          -1.495248 ;
+kqf3ff             =           2.784657 ;
+kqd2aff            =          -1.459783 ;
+kqd2bff            =          -1.001061 ;
+
+kqf1ff             =        1.661885988 ;
+kqd0ff             =       -2.857321177 ;
+
+
+//sextupoles
+ksf6ff             =        131.3961665 ;
+ksf5ff             =        33.93935105 ;
+ksd4ff             =        147.1580155 ;
+ksf1ff             =       -32.34338961 ;
+ksd0ff             =        44.64015041 ;
+
+//skew sextupoles
+ksk1ff             =      0.01759407252 ;
+ksk2ff             =       -1.138281185 ;
+ksk3ff             =      -0.3344029097 ;
+ksk4ff             =      -0.5941887703 ;
+
+//octupole settings | no strengths limits
+koct1              =       -1820.513327 ;
+koct2              =        19115.35753 ;
+
+//octupole settings | with strengths limits
+koct1              =       -355.1442485 ;
+koct2              =        7309.999858 ;
+
