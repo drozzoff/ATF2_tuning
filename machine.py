@@ -373,6 +373,8 @@ class Machine(CoordinateCore):
 				fileName	- string; name of the file
 		'''
 		#iterating over the labels associated with the knobs
+		if self.knobs == None: return ""
+
 		command, labels = "", []
 
 		for x in self.knobs:

@@ -152,7 +152,7 @@ class ATF2Tuning(object):
 		'''
 		assert isinstance(beamline, AbstractMachine), "Input should be of \"abstract_machine\" type"
 
-		self.abs_m, self.mode, self.knobs_preset, self.duplicate_measurement = beamline, None, {}, False
+		self.abs_m, self.mode, self.knobs_preset, self.duplicate_measurement, self.fixed_mode = beamline, None, {}, False, kwargs.get('fixed_mode', False)
 		self.orbit, self.calculation_settings = Orbit(self.abs_m), self.abs_m.calculation_settings, 
 		self.iteration_log = pd.DataFrame(columns = ['knob', 'keyword', 'fitted_value', 'best_obs', 'mode', 'scan_log', 'setup'])
 		self.orbit.read_setup()
@@ -226,7 +226,8 @@ class ATF2Tuning(object):
 		@wraps(func)
 		def wrapper(self, *arg, **kwargs):
 			res = func(self, *arg, **kwargs)
-			if res['keyword'] == "vert. sigma":
+			print self.fixed_mode
+			if (not self.fixed_mode) and res['keyword'] == "vert. sigma":
 				self.update_mode(res['best_obs'])
 			return res
 		return wrapper

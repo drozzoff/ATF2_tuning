@@ -287,13 +287,3 @@ ptc_create_universe;
 	ptc_normal, icase = 5, no = 5, deltap = dp0, maptable = true;
 ptc_end;
 
-//system, "./get_size.py 5";
-
-//stop;
-
-//call, file = "tuning.madx";
-
-//The file needed to effectively check and construct the knobs at the same time
-//call, file = "input.madx";
-
-stop;
