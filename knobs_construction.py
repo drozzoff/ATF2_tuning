@@ -44,11 +44,55 @@ gaussdpp = True
 #initialize the beamline
 atf2_machine = AbstractMachine(sigmaInitial, gaussdpp, order = 2, Nparticles = 100000, method = 0, name = "ATF2")
 
-#generate the Response Matrix
-atf2_machine.build_response_matrix(1e-6, variables = x_shifts, relative = False, sext_off = False, list_of_terms = x_observables)
 
-#Extract the knobs from the precalculated Response Matrix
-knobs = atf2_machine.construct_knobs(x_shifts_knobs_names, 'hor shift knobs')
+def construction():
 
-for x in knobs:
-	print x
+	#generate the Response Matrix
+	atf2_machine.build_response_matrix(1e-6, variables = x_shifts, relative = False, list_of_terms = x_observables, sext_off = False)
+
+	#Extract the knobs from the precalculated Response Matrix
+	knobs = atf2_machine.construct_knobs(x_shifts_knobs_names, 'hor shift knobs')
+
+	#saving knobs
+	atf2_machine.save_knobs()
+
+def check():
+
+	#read the knobs from a file
+	atf2_machine.knobs = map(lambda x: Knob(filename = x), ['knobs_storage/kax.knob', 'knobs_storage/kay.knob', 'knobs_storage/kex.knob'])
+
+	#converting the knobs to the string in the suitable format for madx, and setting the calculations with them
+	atf2_machine.calculation_settings['knobs_info'] = atf2_machine.save_knobs_for_madx()
+	atf2_machine.calculation_settings['sext_off'] = False
+
+	#check the knob	| range_scale to be chosen carrefully -> Mad-X error can occur
+	atf2_machine.knob_check('kex', x_observables, range_scale = 1e-0)
+
+def rescale():
+	#read the knobs from a file
+	atf2_machine.knobs = map(lambda x: Knob(filename = x), ['kax.knob', 'kay.knob', 'kex.knob'])
+
+	#converting the knobs to the string in the suitable format for madx, and setting the calculations with them
+	atf2_machine.calculation_settings['knobs_info'] = atf2_machine.save_knobs_for_madx()
+	atf2_machine.calculation_settings['sext_off'] = False
+
+	#rescale the knob | amplitude to be chosen carrefully (default 1.0) -> Mad-X error can occur
+	atf2_machine.normalize_knob('kay', [2, 3], amplitude = 1e-3, target = 1e-7)
+
+	#updating the MAD-X string
+	atf2_machine.calculation_settings['knobs_info'] = atf2_machine.save_knobs_for_madx()
+
+	#check the knob	| range_scale to be chosen carrefully -> Mad-X error can occur
+	atf2_machine.knob_check('kay', x_observables, range_scale = 1.0)
+
+	atf2_machine.save_knobs()
+
+#construction()
+
+check()
+
+#rescale()
+
+
+#[1.715380767720261e-06, -5.65483509730753e-08, -7.899512634982937e-06, -1.5765378893311704e-06, -3.5258085562038094e-07]
+#[2.3127705857227093e-06, 2.8867307387486934e-07, 6.44848049175222e-06, -2.4736861443931276e-07, 1.6096074276030419e-06]

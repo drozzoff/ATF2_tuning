@@ -371,7 +371,7 @@ class Machine(CoordinateCore):
 		''' Writes the knobs in the memory to a file '''
 		__ = map(lambda x: x.save(), self.knobs)
 
-	@write_mad_command(filename = 'knob.madx')
+#	@write_mad_command(filename = 'knob.madx')
 	def save_knobs_for_madx(self):
 		'''
 			Saves the knobs to a file, which can be called from MadX || Gotta be rewritten in the future to contain a string only
@@ -430,7 +430,7 @@ class AbstractMachine(Machine):
 
 	__repr__ = __str__
 	"""Knob adjustments"""
-	def knob_check(self, knob_name, **kwargs):
+	def knob_check(self, knob_name, observables, **kwargs):
 		'''
 			Iterates the knob and checks the change of the observables
 
@@ -439,15 +439,16 @@ class AbstractMachine(Machine):
 				observables	- list(list(int)); list of the values to be measured for the given value of the knob 
 					(prints the difference from the initial values)
 					Ex: observables = [[0,1], [2,2]] means that we want sigma_x_x' and sigma_y_y contributions
+			-optional
 				range_scale	- float; factor to modify the default iteration range [-1.0, 1.0]
 				fileName	- string; name of the file to save knob iteration information
 		'''
 		assert knob_name in list(map(lambda x: x.name, self.knobs)), 'knob_check() - Knob "' + knob_name + '" does not exist'
 
-		observables, range_scale, fileName = kwargs.get('observables', None), kwargs.get('range_scale', 1.0), kwargs.get('filename', None)
+		range_scale, fileName = kwargs.get('range_scale', 1.0), kwargs.get('filename', None)
 		knob_files = kwargs.get('knob_fiels', [])
 
-		self.construct_mad_request(lattice = self.name)
+		self.construct_mad_request(**ChainMap(kwargs, self.calculation_settings))
 
 		self.sigma_m_0 = self.construct_sigma_matrix()
 		
@@ -505,7 +506,7 @@ class AbstractMachine(Machine):
 		
 		assert knob_name in list(map(lambda x: x.name, self.knobs)), 'normalize_knob() - Knob "' + knob_name + '" does not exist'
 
-		self.construct_mad_request(lattice = self.name)
+		self.construct_mad_request(**ChainMap(kwargs, self.calculation_settings))
 		
 		in_term = 0.0
 		if len(observable) == 3:
