@@ -61,7 +61,7 @@ dp = 0.0008
 sigmaInitial = [np.sqrt(emittanceX * betx), np.sqrt(emittanceX / betx), np.sqrt(emittanceY * bety), np.sqrt(emittanceY / bety), dp]
 gaussdpp = True
 
-atf2_machine = AbstractMachine(sigmaInitial, gaussdpp, tuning_order = 5, Nparticles = 100000, method = 0, name = "ATF2")
+atf2_machine = AbstractMachine(sigmaInitial, gaussdpp, order = 5, Nparticles = 100000, method = 0, name = "ATF2")
 
 knobs_loc, knobs_list = "knobs_storage/", ["kax.knob", "kay.knob", "kex.knob", "coup_yx.knob", "coup_ypx.knob", "key.knob"]
 atf2_machine.knobs = list(map(lambda x: Knob(filename = knobs_loc + x), knobs_list))

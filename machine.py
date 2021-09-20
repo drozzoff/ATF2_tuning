@@ -102,15 +102,20 @@ class Machine(CoordinateCore):
 	def __init__(self, sigmaInitial, gaussdpp, **kwargs):
 		'''
 			Constructor input
-				tuning_order	- int; maximum order of the map to be used in the beam size calculation
-				Nparticles		- int; number of particles to be used in the tracking if the internal tracking of coordinates_core is used
-				method			- int(0 or 1); sigma calculation method (coordinates_core)
-
+				sigmaInitial	- list; list of the sigmax at the beam line entrance
+				gaussdpp		- bool; If True, Gaussian distribution for delta is applied, otherwise - Flat-top
+			
+			Optional input:
+				order			- int; The order of the DA map used in the calculations (default = 2)
+				method			- int; If 1 - Mapclass is used to evaluate the distribution, if 0 - internal routines are used (are slower) (default = 1)
+				name			- string; The name of the beamline (default= default)
+			
 		'''
+
 #		self.map_file = map_file
-		self.tuning_order, self.method, self.knobs, self.name, self.order = kwargs.get('tuning_order', 2), kwargs.get('method', 0), None, kwargs.get('name', "default"), kwargs.get('order', 2)
+		self.order, self.method, self.knobs, self.name= kwargs.get('order', 2), kwargs.get('method', 0), None, kwargs.get('name', "default")
 		self.construct_mad_request(lattice = self.name)
-		super(Machine, self).__init__(sigmaInitial, gaussdpp, order = self.tuning_order, **kwargs)
+		super(Machine, self).__init__(sigmaInitial, gaussdpp, **kwargs)
 #		self.tuning_order, self.Nparticles, self.method = kwargs.get('tuning_order', 2), , kwargs.get('method', 1)
 		
 #		exit()
@@ -225,7 +230,7 @@ class Machine(CoordinateCore):
 		return self.init_terms
 
 
-	def build_response_matrix(self, **kwargs):
+	def build_response_matrix(self, deviation, **kwargs):
 		'''
 			Calculates and returns the response of the terms in list_of_terms (or in Sigma-matrix) on change of the values of parameters in machine.variables (has to be defined before the execution) 
 			
@@ -246,15 +251,18 @@ class Machine(CoordinateCore):
 					*The function ignores weight_type flag if the weights array is defined
 
 			!!In the case when 3 variables sigma is needed, the precalculate_terms() should be called before using this function to calculate the initial values.
+
+			17.09.2021: Description in outdated
 		'''
 
 		#system("cp knobs_contruction.madx input.madx")
 		
-		list_of_terms, weight_type, deviation, relative = kwargs.get('list_of_terms', None), kwargs.get('weight_type', 1), kwargs.get('deviation', None),  kwargs.get('relative', True),
+		list_of_terms, weight_type, relative = kwargs.get('list_of_terms', None), kwargs.get('weight_type', 1),  kwargs.get('relative', True),
 		self.variables = kwargs.get('variables', self.variables)
 
+		assert self.variables != None, "Knobs construction parameters are not set!"
 
-		self.construct_mad_request(lattice = self.name)
+		self.construct_mad_request(lattice = self.name, **kwargs)
 
 		self.sigma_m_0 = self.construct_sigma_matrix()
 
@@ -264,9 +272,6 @@ class Machine(CoordinateCore):
 			self.R = np.zeros((25,len(self.variables)))
 		else:
 			self.R = np.zeros((len(list_of_terms), len(self.variables)))
-
-		if self.variables == None or deviation == None:
-			raise Exception("Knobs construction parameters are not set!")
 
 		x = 0
 		for var in self.variables:
@@ -279,7 +284,7 @@ class Machine(CoordinateCore):
 				command =  var + "=" + str(deviation) + ";\n"
 			command += 'exec, apply_knobs;\n'
 
-			self.construct_mad_request(lattice = self.name, custom_command = command)
+			self.construct_mad_request(lattice = self.name, custom_command = command, **kwargs)
 
 			sigma_m = self.construct_sigma_matrix()
 			print sigma_m
@@ -345,6 +350,8 @@ class Machine(CoordinateCore):
 									len(knobs_name) has to be the same as len(self.list_of_terms) <-- should include an Exception
 		'''
 
+		assert 'R' in self.__dict__, "Response Matrix is missing, run ``build_response_matrix()'' before"
+
 		U, E, V_t = LA.svd(self.R)
 
 		V = V_t.transpose()
@@ -354,9 +361,9 @@ class Machine(CoordinateCore):
 
 		if kwargs.get('overwrite_knobs', False) or (self.knobs == None):
 			self.knobs = []
-	
+
 		for i in range(len(self.R)):
-			self.knobs.append(knob(variables = self.variables, vector = list(V_t[i]), name = knobs_name[i], label = labels))
+			self.knobs.append(Knob(variables = self.variables, vector = list(V_t[i]), name = knobs_name[i], label = label))
 
 		return self.knobs
 
