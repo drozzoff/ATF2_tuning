@@ -213,6 +213,3 @@ def octupole_alignment():
 
 #rescale()
 
-#simulate_tuning()
-
-octupole_alignment()
