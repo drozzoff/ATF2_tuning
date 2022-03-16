@@ -387,10 +387,10 @@ class ATF2Tuning(object):
 #		res = self.abs_m.iterate_knob('kay', 0, **ChainMap(kwargs, {'points': N_points}, self.calculation_settings))  
 		left, right = kwargs.get("offset_range", [-1e-3, 1e-3])
 		data = {
-			'oct_offset': [-0.001, -0.0006666666666666668, -0.0003333333333333334, 0.0, 0.00033333333333333327, 0.0006666666666666665, 0.001], #[],
-			'waist_shift': [-0.5793754400494923, -0.2609700058680508, -0.06606305918414809, -0.0001797546570017556, -0.06865089415237394, -0.276609836087426, -0.628992604396035] #[]
+			'oct_offset': [],
+			'waist_shift': []
 		}
-		"""
+		
 		for offset in np.linspace(left, right, kwargs.get("offset_points", 7)):
 			res = self.abs_m.iterate_knob('kay', 0, **ChainMap(kwargs, {
 				'fit': gaussian_fit, 
@@ -401,8 +401,7 @@ class ATF2Tuning(object):
 			print "OCT2 offset\t" + str(offset) + "\nwaist shift\t" + str(res['fitted_value'])
 			data['oct_offset'].append(offset)
 			data['waist_shift'].append(res['fitted_value'])
-		"""
-
+		
 		fit_res = parabola_fit(data['oct_offset'], data['waist_shift'], init_guess = [0.0, -1e6, 0.0], ignore_restrictions = True)
 		print "\tMagnetic center is " + str(fit_res[0])
 		if "bba_plot" in kwargs:
