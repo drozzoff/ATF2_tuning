@@ -7,6 +7,7 @@ from chainmap import ChainMap
 from functools import wraps
 import pandas as pd
 import json
+import warnings
 
 from ipbsm import IPBSM
 from orbit import Orbit
@@ -47,10 +48,22 @@ def add_measurement_error(mode = None):
 	_ipbsm = IPBSM()
 	return lambda x: _ipbsm.add_error(x, mode)
 
-def modulation_fit(knob_range, observable_values):
-	'''Gaussian fit of the modulation'''
+def gaussian_fit(knob_range, observable_values, **kwargs):
+	'''
+		Gaussian fit (of the modulation, by default)
+
+		optional parameters:
+			init_guess			- [double, double, double]; the list of the initial guesses for the Gaussian (default = [max(observable_values), (knob_range[-1] - knob_range[0]) / 2.0, 0.0])
+
+		Output:
+			[
+				fit_center,		- double; center of the Gaussian fit
+				fit_func		- func; resulting fit function 
+			]
+
+	'''
 	try: 
-		fit_params, pcov = scipy.optimize.curve_fit(gauss, knob_range, observable_values, [max(observable_values), (knob_range[-1] - knob_range[0]) / 2.0, 0.0], None, True, True, [-np.inf, np.inf], 'trf', gauss_jac)
+		fit_params, pcov = scipy.optimize.curve_fit(gauss, knob_range, observable_values, kwargs.get("init_guess", [max(observable_values), (knob_range[-1] - knob_range[0]) / 2.0, 0.0]), None, True, True, [-np.inf, np.inf], 'trf', gauss_jac)
 	except RuntimeError: 
 		'''The fitting failed'''
 		print "\tFitting failed!\n\tSetting to zero."
@@ -63,14 +76,31 @@ def modulation_fit(knob_range, observable_values):
 	print "\tFit is correct!\n\tLargest modulation for " + str(optimal)
 	return [fit_params[2], lambda x: gauss(x, *fit_params)]	
 
-def beam_size_fit(knob_range, observable_values):
-	''' Parabolic fit of the beam size'''
+def parabola_fit(knob_range, observable_values, **kwargs):
+	'''
+		Parabolic fit (of the beamsize, by default)
+
+		optional parameters:
+			init_guess				- [double, double, double]; the list of the initial guesses for the Parabola (default = [1e-13, 10, 0.0])
+			ignore_restrictions		- bool; if True, the initial fit result check is ignored (default = False) 
+											
+
+		Output:
+			[
+				fit_center,			- double; center of the Gaussian fit
+				fit_func			- func; resulting fit function 
+			]
+	'''
 	try: 
-		fit_params, pcov = scipy.optimize.curve_fit(parabola, knob_range, observable_values, [1e-13, 10, 0.0], None, True, True, [-np.inf, np.inf], 'lm', parabola_jac)
+		fit_params, pcov = scipy.optimize.curve_fit(parabola, knob_range, observable_values, kwargs.get("init_guess", [1e-13, 10, 0.0]), None, True, True, [-np.inf, np.inf], 'lm', parabola_jac)
 	except RuntimeError:
 		''' fitting failed, setting to zero '''
 		print "\tFitting failed!\n\tSetting to zero."
 		return [reduce(lambda x, y: x + y, knob_range) / len(knob_range)]
+
+	if kwargs.get('ignore_restrictions', False):
+		return [fit_params[2], lambda x: parabola(x, *fit_params)]
+	""" Simple check for the beam size fitting"""
 	if fit_params[1] == 0:
 		'''	incorrect fit '''
 		print "\tFit is not correct!\n\tSetting to zero."
@@ -147,69 +177,93 @@ class ATF2Tuning(object):
 	"""
 	def __init__(self, beamline, **kwargs):
 		'''
-			Constructor input:
-				beamline	- abstract_machine; input machine that is to be tuned
+			Input:
+				beamline				- abstract_machine; input machine that is to be tuned
+			
+			optional parameters:
+				fixed_mode				- bool; if True, IPBSM mode is kept fixe in the tuning (default = False) | is ignored if 'mode' is not set
+				initial_errors			- string; name of the file with the initial beamline errors
+				ipbsm_errors			- bool;	if True IPBSM dynamic errors are taken into account (default = False)
+				mode					- string; mode of the IPBSM | is ignored if fixed_mode = False
+
+			Important (extended definition, covers some of the explicit parameters of the AbstractMachine.iterate_knob()):
+			calculation_settings = {
+				'lattice'			- string; name of the lattice									| inherits from 'beamline'
+				'knobs_info'		- string; knobs definition in the plain format, MAD-X readable. | inherits from 'beamline'
+				'post_adj'			- list(func); additional action performed after the observable evaluated.													
+													This includes measurement errors, convertion to modulation, custom..
+				'duplicate'			- bool; if True, the observable is evaluated twice for each knob value
+				'initial_errors'	- string; name of the file with the initial beamline errors 	| is equal to the input 'initial_errors' if it is given as an input
+				'ipbsm_errors'		- bool; if True IPBSM dynamic errors are taken into account		| is equal to the input 'ipbsm_errors'
+			}
 		'''
 		assert isinstance(beamline, AbstractMachine), "Input should be of \"abstract_machine\" type"
 
-		self.abs_m, self.mode, self.knobs_preset, self.duplicate_measurement, self.fixed_mode = beamline, None, {}, False, kwargs.get('fixed_mode', False)
-		self.orbit, self.calculation_settings = Orbit(self.abs_m), self.abs_m.calculation_settings, 
+		self.abs_m, self.knobs_preset, self.duplicate_measurement, self.fixed_mode = beamline, {}, False, kwargs.get('fixed_mode', False)
+		self.orbit, self.calculation_settings = Orbit(self.abs_m), self.abs_m.calculation_settings
 		self.iteration_log = pd.DataFrame(columns = ['knob', 'keyword', 'fitted_value', 'best_obs', 'mode', 'scan_log', 'setup'])
 		self.orbit.read_setup()
 
 		#Setting up the calculation settings
-		self.calculation_settings['knobs_info'] = self.abs_m.save_knobs_for_madx()
-		if kwargs.get('ipbsm_errors', False): 
-			self.calculation_settings['post_adj'] = [add_measurement_error(self.mode)]
-			self.calculation_settings['duplicate'] = True
-		else:
-			self.calculation_settings['post_adj'] = []
+		self.calculation_settings.update({
+			'knobs_info'	: self.abs_m.save_knobs_for_madx(),
+			'ipbsm_errors'	: kwargs.get('ipbsm_errors', False),
+			'duplicate'		: kwargs.get('ipbsm_errors', False)
+			})
 
 		if 'initial_errors' in kwargs:
 			self.calculation_settings['initial_errors'] = kwargs['initial_errors']
 
-		self.update_mode()
+		self.mode = kwargs.get('mode', None)
 
 	def __str__(self):
 		return str(self.__dict__)
 
 	__repr__ = __str__
 
+	@property
+	def mode(self):
+		return self._mode
+	
+	@mode.setter
+	def mode(self, value):
+		if value == None: 
+			self._mode = None
+			return
+		if value in ["wire", "6.4", "30", "174"]:
+			self._mode = value
+			self.calculation_settings['fit'] = parabola_fit if self.mode == 'wire' else gaussian_fit
+			self.calculation_settings['post_adj'] = [add_measurement_error(self._mode)] if self.calculation_settings['ipbsm_errors'] else []
+			if value in ["6.4", "30", "174"]:
+				self.calculation_settings['post_adj'] += [convert_to_modulation(self._mode)]
+
+		else:
+			raise ValueError(str(value) + ' - incorrect mode')
+
 	def update_mode(self, data = None):
 		'''Updates the mode automatically within the iteration routine'''
-#		modes_list = ["wire", "8", "30", "174"]
-		modes_list = ["wire", "6.4", "30", "174"]
+
 		if self.mode == None:
-			if data == None:
-				self.mode = "wire"
-				self.calculation_settings['fit'] = beam_size_fit
-				return
-			elif data < (1.4e-6)**2:
-#				self.mode = "8"
-				self.mode = "6.4"	#Using 6.4 degree mode as a default initial stage of the IP-BSM tuning
-				self.calculation_settings['post_adj'] += [convert_to_modulation(self.mode)]
-				self.calculation_settings['fit'] = modulation_fit
+			if data != None and data < (1.4e-6)**2:
+				self.mode = "6.4"
+				print "Switching to 6.4 degree mode.."
 				return
 			else:
 				self.mode = "wire"
 				return
 
 		if self.mode == "wire" and data < (1.4e-6)**2:
-#			self.mode = "8"
-#			print "Switching to 8 degree mode.."
 			self.mode = "6.4"
-			self.calculation_settings['post_adj'] += [convert_to_modulation(self.mode)]
-			self.calculation_settings['fit'] = modulation_fit
 			print "Switching to 6.4 degree mode.."
 			return
+
 		if self.mode == "6.4" and data > 0.75:
 			self.mode = "30"
-			self.calculation_settings['post_adj'][-1] = convert_to_modulation(self.mode)
 			print "Switching to 30 degree mode.."
 			return
+
 		if self.mode == "30" and data > 0.7:
 			self.mode = "174"
-			self.calculation_settings['post_adj'][-1] = convert_to_modulation(self.mode)
 			print "Switching to 174 degree mode.."
 			return
 		return
@@ -226,7 +280,6 @@ class ATF2Tuning(object):
 		@wraps(func)
 		def wrapper(self, *arg, **kwargs):
 			res = func(self, *arg, **kwargs)
-			print self.fixed_mode
 			if (not self.fixed_mode) and res['keyword'] == "vert. sigma":
 				self.update_mode(res['best_obs'])
 			return res
@@ -249,12 +302,30 @@ class ATF2Tuning(object):
 	@_update_mode
 	@_save_iteration
 	def tune(self, var, obs = 0, **kwargs):
-		'''Base function for the beam size tuning'''
-		assert obs in range(2), 'Incorrect parameter' 
-		N_points = 9
-		if self.mode == "174": N_points = 21
+		'''
+			Base function for the beam size tuning
+		
+			Input:
+				var					- string; name of the knob to iterate
+				obs					- int, list(list(int)); 
+										if obs = 0(default) the vertical beam size is evaluated, 
+										if obs = 1 the horizontal beam size is evaluated,
 
-		res = self.abs_m.iterate_knob(var, obs, **ChainMap(kwargs, {'points': N_points}, self.calculation_settings)) # [knob_amp, best_value]
+			optional parameters:
+				additive			- bool; if True, the knob fitted value is added to the current knob value, otherwise is set to it (default = True)
+				points				- int; number of points in the scan (default = 9 (for all the modes except '174'), 21 (for '174' mode))
+
+			*not explicitely used here, but is passed further to machine.construct_mad_request() and affect the result:
+				sext_off			- bool; if True, sextupoles are switched off (default = True)
+				oct_off				- bool; if True, octupoles are switched off (default = True)
+			
+			*not explicitely used here, but is passed further to AbstractMachine.iterate_knob():
+				plot				- func; if defined the scan results are plotted
+
+		'''
+		assert obs in range(2), 'Incorrect parameter' 
+
+		res = self.abs_m.iterate_knob(var, obs, **ChainMap(kwargs, {'points': 21 if self.mode == '174' else 9 }, self.calculation_settings))
 
 		if (var in self.knobs_preset) and kwargs.get('additive', True):
 			self.knobs_preset[var] += res['fitted_value']
@@ -287,39 +358,57 @@ class ATF2Tuning(object):
 			self.knobs_preset = json.load(f)
 		self.calculation_settings['knobs_preset'] = self.knobs_preset
 
+	@_update_calculation_settings
+	@_save_iteration
+	def oct2_alignment(self, **kwargs):
+		'''
+			Iterates the knob AY to find the magnetic center of OCT2
 
-	'''07.02.2021
+			optional parameters:
+				offset_range		- [double, double]; range of the OCT2 misalignments (default = [-1e-3, 1e-3])
+				offset_points		- int; number of the points in the scan (default = 7)
+				variable			- string; name of the varible in MAD-X that is iterated (default = "oct2dx")
+				mode				- string; IPBSM mode: 'wire', '6.4', 30', '174' -> if not given, the current state self.mode is used ->
+													if self.mode == None, '174' mode is set
+				bba_plot			- func(x, y, fit_func); if defined, the BBA result is plotted
 
-		Octupole alignment is not yet updated
-	'''
-	def oct2_align(self, variable, **kwargs):
-		'''alignment routine of OCT2 based on the waist shift at the IP'''
-		default_value = {'step': 21, 'shift_range': [-1e-3, 1e-3], 'plot_option': False, 'add_variable': None, 'add_shift': None}
-		adjust = lambda x: kwargs.get(x, default_value[x])
-		for x in default_value:
-			default_value[x] = adjust(x)
+			*not explicitely used here, but is passed further to AbstractMachine.iterate_knob():
+				plot				- func; if defined the AY knob scan results are plotted
+				knob_range			- list - [double, double]; iteration range for the given knob (default = [-2.0, 2.0])
+				points				- int; the number of points in an iteration (default = 9)			-
+		'''
 
-		best_value, data_log = [], []
-		N_points, default_strategy, plot_option = 7, 3, True
+		self.mode = kwargs.get("mode", '174' if self.mode == None else self.mode)
 		
-#		if self.mode == "174": N_points = 15
+		if self.mode == '6.4': warnings.warn('Octupole alignment needs 30 or 174 degree mode')
+		assert self.mode != "wire", 'Octupole alignment not possible with the Wire Scanner'
 
-		def update_location(value):
-			with open("bba_alignment.madx", 'w') as f:
-				print >> f, variable + " = " + variable + " + ("  + str(value) + ");"
-				if default_value['add_variable'] == None: return
-				print >> f, default_value['add_variable']  + " = " + default_value['add_variable'] + " + ("  + str(default_value['add_shift']) + ");"
-		peaks = []
-		shift_range = default_value['shift_range']
-#		print shift_range, default_value['step']
-		for shift in list(np.linspace(shift_range[0], shift_range[1], default_value['step'])):
-#		for shift in [-0.000125]:
-			update_location(shift)
-			knob_optimum, __, __ = self.abs_m.iterate_knob('kay_2', self.observable, default_value['plot_option'], False, [-0.2, 0.2], default_strategy, self.mode, N_points, False)
-			peaks.append(knob_optimum)
-			print shift, knob_optimum
+		variable = kwargs.get("variable", "oct2dx")
+#		res = self.abs_m.iterate_knob('kay', 0, **ChainMap(kwargs, {'points': N_points}, self.calculation_settings))  
+		left, right = kwargs.get("offset_range", [-1e-3, 1e-3])
+		data = {
+			'oct_offset': [-0.001, -0.0006666666666666668, -0.0003333333333333334, 0.0, 0.00033333333333333327, 0.0006666666666666665, 0.001], #[],
+			'waist_shift': [-0.5793754400494923, -0.2609700058680508, -0.06606305918414809, -0.0001797546570017556, -0.06865089415237394, -0.276609836087426, -0.628992604396035] #[]
+		}
+		"""
+		for offset in np.linspace(left, right, kwargs.get("offset_points", 7)):
+			res = self.abs_m.iterate_knob('kay', 0, **ChainMap(kwargs, {
+				'fit': gaussian_fit, 
+				'custom_command': variable + " = " + variable + " + ("  + str(offset) + ");\nexec, apply_knobs;",	#should think how to not use MAD-X commands here
+				'sext_off': False,
+				'oct_off': False
+				 }, self.calculation_settings))
+			print "OCT2 offset\t" + str(offset) + "\nwaist shift\t" + str(res['fitted_value'])
+			data['oct_offset'].append(offset)
+			data['waist_shift'].append(res['fitted_value'])
+		"""
 
-		print peaks
+		fit_res = parabola_fit(data['oct_offset'], data['waist_shift'], init_guess = [0.0, -1e6, 0.0], ignore_restrictions = True)
+		print "\tMagnetic center is " + str(fit_res[0])
+		if "bba_plot" in kwargs:
+			kwargs.get("bba_plot")(data['oct_offset'], data['waist_shift'], fit_res[1])
+		self.knobs_preset['oct2dx'] = fit_res[0]
+		return {'knob': "oct2dx", 'keyword': 'oct BBA', 'mode': 'BBA'}
 
 if __name__ == "__main__":
 	'''testing routine'''

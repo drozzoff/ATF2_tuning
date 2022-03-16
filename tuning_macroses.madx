@@ -90,6 +90,17 @@ apply_knobs: macro = {
 //	select, flag = error, column = dx, dy, k1l, k2l, k3l;
 //	esave, file = 'errors_after.dat';
 
+	//octupoles alignment errors
+	select, flag=error, clear;
+	SELECT,FLAG=ERROR, pattern = "OCTUPOLE1";
+	EALIGN, DX = oct1dx, DY = oct1dy;//, DPSI:=oct1tt ;
+
+	select, flag=error, clear;
+	SELECT,FLAG=ERROR, pattern = "OCTUPOLE2";
+	EALIGN, DX = oct2dx, DY = oct2dy;//  ,DPSI:=oct2tt ;
+
+
+
 	//updating the strentghs of the sextupoles
 	KSF6FF = KSF6FF + KSF6kn;
 	KSF5FF = KSF5FF + KSF5kn;
