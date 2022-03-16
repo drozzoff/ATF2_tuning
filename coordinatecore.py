@@ -195,23 +195,20 @@ class CoordinateCore(object):
 	"""Utilities"""
 	def get_obs(self, **kwargs):
 		'''
-			Updates the observable for the knob iteration
-			Normally, beam size is used as the observable
+			Evaluates the obs(default is 0 - vertical beam size)
 
-			Input:
-				observable	- type of observable
-					list(int) - custom covariance checking.
-				int			- custom observable
-					0 - vertical beam size
-					1 - horizontal beam size
-
-			**Optionally it is possible to use any other variables, such as luminosity
+			optional input:
+				obs				- int, list(list(int)); 
+									if obs = 0(default) the vertical beam size is evaluated, 
+									if obs = 1 the horizontal beam size is evaluated,
+									if obs = list(list(int)), the sigma-matrix terms given in the list are evaluated
+										Ex. obs = [[3, 3]] | [[2, 3], [0, 5]]
 		'''
 		obs, method = kwargs.get('observable', 0), kwargs.get('method', 0)
 
 		if isinstance(obs, list):
 			'''calculates the custom conjugation'''
-			return self.get_sigma(obs)
+			return map(lambda x: self.get_sigma(x), obs)
 		elif obs == 0:
 			'''default one, correspond to the vertical beam size tuning'''
 			return abs(self.Map.sigma('y', self.sigmaInitial, self.gaussdpp) - self.Map.offset('y', self.sigmaInitial, self.gaussdpp) ** 2)

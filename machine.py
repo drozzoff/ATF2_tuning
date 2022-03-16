@@ -10,7 +10,7 @@ import random
 import json
 import subprocess
 from functools import wraps
-
+import warnings
 
 #Python 3.2+
 #from collections import ChainMap
@@ -82,6 +82,7 @@ class Knob(object):
 	def __mul__(self, factor):
 		'''Scales the knob.vector'''
 		self.vector = [x * factor for x in self.vector]
+		return self
 
 	def save(self):
 		'''Saves the knob parameters to a file with a name based on the name of the knob'''
@@ -101,19 +102,19 @@ class Machine(CoordinateCore):
 	"""
 	def __init__(self, sigmaInitial, gaussdpp, **kwargs):
 		'''
-			Constructor input
+			Input
 				sigmaInitial	- list; list of the sigmax at the beam line entrance
 				gaussdpp		- bool; If True, Gaussian distribution for delta is applied, otherwise - Flat-top
 			
-			Optional input:
+			optional parameters:
 				order			- int; The order of the DA map used in the calculations (default = 2)
-				method			- int; If 1 - Mapclass is used to evaluate the distribution, if 0 - internal routines are used (are slower) (default = 1)
-				name			- string; The name of the beamline (default= default)
+				method			- int; If 1 - Mapclass is used to evaluate the distribution, if 0 - internal routines are used (slower) (default = 1)
+				name			- string; The name of the beamline (default= "default")
 			
 		'''
 
 #		self.map_file = map_file
-		self.order, self.method, self.knobs, self.name= kwargs.get('order', 2), kwargs.get('method', 0), None, kwargs.get('name', "default")
+		self.order, self.method, self.knobs, self.name = kwargs.get('order', 2), kwargs.get('method', 0), None, kwargs.get('name', "default")
 		self.construct_mad_request(lattice = self.name)
 		super(Machine, self).__init__(sigmaInitial, gaussdpp, **kwargs)
 #		self.tuning_order, self.Nparticles, self.method = kwargs.get('tuning_order', 2), , kwargs.get('method', 1)
@@ -147,6 +148,21 @@ class Machine(CoordinateCore):
 			3. initial knob values
 			4. rest of the initial changes
 			5. apply the knob
+
+			Input:
+
+			optional parameters:
+				lattice					- string; name of the lattice (default = "default")
+				initial_errors			- string; name of the file with the initial beamline errors
+				bba_settings			- string; magnet alignment corrections	| so far, not implemented
+				sext_off				- bool; if True, sextupoles are switched off (default = True)
+				oct_off					- bool; if True, octupoles are switched off (default = True)
+				knobs_info				- string; knobs definition in the MAD-X readable format, connecting knobs amp with lattice modifications
+				knobs_preset			- dict ({'knob_name': knob_value, ..}); current knobs values
+				apply_knob				- dict ({'knob_name': knob_value}); a separate knob to be applied
+				custom_command			- string; a custom command to MAD-X environment
+				correct_orbit			- bool; if True, orbit correction with MAD-X internal routine is performed (default = False)
+				measure_orbit			- bool; if True, orbit measurement is performed (default = False)
 		
 		'''
 ##########################################################################################
@@ -186,6 +202,7 @@ class Machine(CoordinateCore):
 				command += app_knob + ' = ' + str(knob_list[app_knob]) + ';\n'
 
 			command += "exec, apply_knobs;\n"
+			command += 'exec, reset_knobs;\n'
 ##########################################################################################
 		'''Custom command to be executed in MadX | Mainly used when constructing the knobs'''
 		if 'custom_command' in kwargs:
@@ -410,11 +427,21 @@ class AbstractMachine(Machine):
 	"""
 	def __init__(self, sigmaInitial, gaussdpp, **kwargs):
 		'''
-			!!!have to be updated -> check base class
-			Constructor input
-				tuning_order	- int; maximum order of the map to be used in the beam size calculation
-				Nparticles		- int; number of particles to be used in the tracking if the internal tracking of coordinates_core is used
-				method			- int(0 or 1); sigma calculation method (coordinates_core)
+			Input
+				sigmaInitial		- list; list of the sigmax at the beam line entrance
+				gaussdpp			- bool; If True, Gaussian distribution for delta is applied, otherwise - Flat-top
+			
+			optional parameters:
+				order				- int; The order of the DA map used in the calculations (default = 2)
+				method				- int; If 1 - Mapclass is used to evaluate the distribution, if 0 - internal routines are used (slower) (default = 1)
+				name				- string; The name of the beamline (default = "default")
+				beam_size_errors	- bool; If True, the IPBSM measurement errors are applied (default = False)
+			
+			Important:
+			calculation_settings = {
+				'lattice'			- string; name of the lattice, is equivalent to varibale 'name'
+				'knobs_info'		- string; knobs definition in the plain format, MAD-X readable. If knobs exist in the memory, are automatically converted
+			}
 
 		'''
 		super(AbstractMachine, self).__init__(sigmaInitial, gaussdpp, **kwargs)
@@ -429,8 +456,141 @@ class AbstractMachine(Machine):
 		return str(self.__dict__)
 
 	__repr__ = __str__
-	"""Knob adjustments"""
-	def knob_check(self, knob_name, observables, **kwargs):
+
+	def iterate_knob(self, knob_name, observable, **kwargs):
+		'''
+			Iterates the knob and observes the given parameter
+			
+			Input:
+				knob_name			- string; name of the knob to iterate
+				observable			- 0, 1, or list(list(int)); variable to be checked for the iteration
+
+			optional parameters:
+				post_adj			- list(func); additional action performed after the observable evaluated.
+													This includes measurement errors, convertion to modulation, custom..
+				knob_range			- list - [double, double]; iteration range for the given knob (default = [-2.0, 2.0])
+				points				- int; the number of points in an iteration (default = 9)
+				duplicate			- bool; if True, the observable is evaluated twice for each knob value (default = False)
+				fit					- func; fit function that is applied to the data set of the observed terms
+				plot				- func; plots the observed data, along with the fit function
+			
+			*not explicitely used here, but is passed further to machine.construct_mad_request() and affect the result:
+				initial_errors		- string; name of the file with the initial beamline errors
+				sext_off			- bool; if True, sextupoles are switched off (default = True)
+				oct_off				- bool; if True, octupoles are switched off (default = True)
+
+			output:
+				{
+					'scan_log'		- json string; contains a dict with the scan data:
+										{
+											'knob_range': list, 
+											'obs_data': list
+										}
+					'fitted_value'	- double; the optimal knob value evaluated from the fitting		| if fit() function is given in the input
+					'best_obs'		- double; the observable value for the fitted value 			| if fit() function is given in the input
+				}
+		'''
+		if knob_name not in map(lambda x: x.name, self.knobs): warnings.warn('knob_check() - Knob "' + knob_name + '" is not recognized')
+
+		post_adj, knob_range = kwargs.get('post_adj', []), kwargs.get('knob_range', [-2.0, 2.0])
+		knob_range = np.array(np.linspace(knob_range[0], knob_range[1], kwargs.get('points', 9)))
+
+		if kwargs.get('duplicate', False):
+			knob_range = np.sort(np.concatenate((knob_range, knob_range)))
+
+		observable_values = []
+
+		print "Iterating the knob " + knob_name + ":"
+		if observable == 0:
+			print "\tMeasuring the vertical beam size"
+		if observable == 1:
+			print "\tMeasuring the horizontal beam size"
+		if  isinstance(observable, list):
+			print "\tCalculating the Sigma-matrix terms",
+			for x in observable:
+				print x,
+			print ""
+
+		for x in knob_range:
+			self.construct_mad_request(apply_knob = {knob_name: x}, **ChainMap(kwargs, self.calculation_settings))
+			
+			obs = self.get_obs(observable = observable)
+			print "\t" ,  x, "\t", obs,
+			for f in post_adj:
+				obs = f(obs)
+				print "->\t", obs,
+			observable_values.append(obs)
+			print ""
+
+		fit_result = None	
+		if 'fit' in kwargs: fit_result = kwargs['fit'](knob_range, observable_values)
+		if ('plot' in kwargs):
+			if (fit_result != None) and len(fit_result) == 2:
+				kwargs['plot'](knob_range, observable_values, fit_result[1])
+			else:
+				kwargs['plot'](knob_range, observable_values)
+
+		iter_data = json.dumps({'knob_range': knob_range.tolist(), 'obs_data': observable_values})
+
+		if fit_result != None:
+			if len(fit_result) == 2:
+				return {'scan_log': iter_data, 'fitted_value': fit_result[0], 'best_obs': fit_result[1](fit_result[0])}
+			else:
+				'''evaluating the obs'''
+				self.construct_mad_request(apply_knob = {knob_name: fit_result[0]}, **ChainMap(kwargs, self.calculation_settings))
+				return {'scan_log': iter_data, 'fitted_value': fit_result[0], 'best_obs': self.get_obs(observable = observable)}
+		else: return {'scan_log': iter_data}
+
+	
+	def knob_check(self, knob_name, observable, **kwargs):
+		'''
+			Similar to "iterate_knob()", but the observable is calculated with respect to the initial values, when the knob
+				is not applied
+
+			Input:
+				knob_name			- string; name of the knob to iterate
+				observable			- 0, 1, or list(list(int)); variable to be checked for the iteration
+			optional input:
+				points				- int (default - 9); number of iteration points
+				knob_range			- list([x, y]) (default - [-2.0, 2.0]); range of the knob iteration
+		
+		'''
+		self.construct_mad_request(**ChainMap(kwargs, self.calculation_settings))
+		init_obs = self.get_obs(observable = observable)
+		
+		opt = {x: kwargs[x] for x in filter(lambda x: x in ['points', 'knob_range'], kwargs)}
+
+		return self.iterate_knob(knob_name, observable, post_adj = [lambda in_list: map(lambda x, y: x - y, in_list, init_obs)], **opt)
+	
+	def normalize_knob(self, knob_name, observable, **kwargs):
+		'''
+			Scales the given knob, such that the contribution is equal to the target
+
+			Input:
+				knob_name			- string; name of the knob to iterate
+				observable			- 0, 1, or list(int); variable to be checked for the iteration - a single one is expected
+			optional parameters:
+				points				- int; number of iteration points (default = 9)
+				knob_range			- [double, double]; range of the knob iteration (default = [-2.0, 2.0])
+		
+
+		'''
+		amplitude, target = kwargs.get('amplitude', 1.0),  kwargs.get('target', 1.0)
+
+		data = self.knob_check(knob_name, [observable], points = 1, knob_range = [amplitude, amplitude])
+
+		factor = target / json.loads(data['scan_log'])['obs_data'][0][0] * amplitude
+		print "Scalling factor is", factor
+
+		for i in range(len(self.knobs)):
+			if self.knobs[i].name == knob_name:
+				self.knobs[i] = self.knobs[i] * factor
+		
+		return self.knobs
+		
+
+	"""Old routines"""
+	def _knob_check(self, knob_name, observables, **kwargs):
 		'''
 			Iterates the knob and checks the change of the observables
 
@@ -439,14 +599,14 @@ class AbstractMachine(Machine):
 				observables	- list(list(int)); list of the values to be measured for the given value of the knob 
 					(prints the difference from the initial values)
 					Ex: observables = [[0,1], [2,2]] means that we want sigma_x_x' and sigma_y_y contributions
-			-optional
+			optional
 				range_scale	- float; factor to modify the default iteration range [-1.0, 1.0]
 				fileName	- string; name of the file to save knob iteration information
 		'''
 		assert knob_name in list(map(lambda x: x.name, self.knobs)), 'knob_check() - Knob "' + knob_name + '" does not exist'
 
 		range_scale, fileName = kwargs.get('range_scale', 1.0), kwargs.get('filename', None)
-		knob_files = kwargs.get('knob_fiels', [])
+		knob_files = kwargs.get('knob_files', [])
 
 		self.construct_mad_request(**ChainMap(kwargs, self.calculation_settings))
 
@@ -484,8 +644,7 @@ class AbstractMachine(Machine):
 
 		return log_data
 
-
-	def normalize_knob(self, knob_name, observable, **kwargs):
+	def _normalize_knob(self, knob_name, observable, **kwargs):
 		'''
 			Modifies the knob in a such a way that 1.0 knob amplitude would give target value for the observable
 			The knob is applied once at the amplitude 'value' 
@@ -540,73 +699,6 @@ class AbstractMachine(Machine):
 		'''Returns sigma or some specific terms'''
 		self.construct_mad_request(**ChainMap(kwargs, self.calculation_settings))	
 		return self.get_obs(observable = observable)
-
-	def iterate_knob(self, knob_name, observable, **kwargs):
-		'''
-			Iterates the knob in the range (default is [-2.0, 2.0]) and checking the vertical beam size. After matches the knob value to get the smallest beam size.
-			
-			Input parameters:
-				knob_name			- string; name of the knob to iterate
-				observable			- variable to be checked for the iteration
-
-				show_plot			- bool; plotting options
-				sext_flag			- bool; if True, normal sextupoles are ON, False - OFF
-				range				- list(float); iteration range
-				strategy			- int(1, 2 or 3); different strategies for the observable (beam_size) tuning:
-										1: Beam size tuning | Parabola fit
-										2: Same as (1) but the beam size is measured twice for each amplitude | Parabola fit
-										3: Modulation is used (2 measurements for each amplitude) | Gaussian fit
-				mode				- string; definition of the measurement mode, such as "wire", "8", "30" and "174" degree modes
-				Number_of_points	- int;  number of points used within the given range
-
-			***
-			If beam_size_errors is True, the strategies, where 2 measurements are expected will be ignored
-		'''
-		
-		post_adj, knob_range = kwargs.get('post_adj', []), kwargs.get('knob_range', [-2.0, 2.0])
-		knob_range = np.array(np.linspace(knob_range[0], knob_range[1], kwargs.get('points', 9)))
-
-		if kwargs.get('duplicate', False):
-			knob_range = np.sort(np.concatenate((knob_range, knob_range)))
-
-		observable_values = []
-
-		print "Iterating the knob " + knob_name + ":"
-		if observable == 0:
-			print "\tMeasuring the vertical beam size"
-		if observable == 1:
-			print "\tMeasuring the horizontal beam size"
-		
-		for x in knob_range:
-			self.construct_mad_request(apply_knob = {knob_name: x}, **ChainMap(kwargs, self.calculation_settings))
-			
-			obs = self.get_obs(observable = observable)
-			print "\t" ,  x, "\t", obs,
-			for f in post_adj:
-				obs = f(obs)
-				print "->\t", obs,
-			observable_values.append(obs)
-			print ""
-
-		fit_result = None	
-		if 'fit' in kwargs: fit_result = kwargs['fit'](knob_range, observable_values)
-		if ('plot' in kwargs):
-			if (fit_result != None) and len(fit_result) == 2:
-				kwargs['plot'](knob_range, observable_values, fit_result[1])
-			else:
-				kwargs['plot'](knob_range, observable_values)
-
-		iter_data = json.dumps({'knob_range': knob_range.tolist(), 'obs_data': observable_values})
-
-		if fit_result != None:
-			if len(fit_result) == 2:
-				return {'scan_log': iter_data, 'fitted_value': fit_result[0], 'best_obs': fit_result[1](fit_result[0])}
-			else:
-				'''evaluating the obs'''
-				self.construct_mad_request(apply_knob = {knob_name: fit_result[0]}, **ChainMap(kwargs, self.calculation_settings))
-				return {'scan_log': iter_data, 'fitted_value': fit_result[0], 'best_obs': self.get_obs(observable = observable)}
-		else: return {'scan_log': iter_data}
-
 
 '''Testing routine'''
 if __name__ == "__main__":
